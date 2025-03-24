@@ -1,0 +1,17 @@
+{
+  "name": "interactivemapv3",
+  "version": "1.0.0",
+  "description": "Interactive Campus Map using CesiumJS",
+  "main": "index.js",
+  "scripts": {
+    "dev": "vite src",
+    "build": "vite build src",
+    "preview": "vite preview src"
+  },
+  "keywords": ["campus", "map", "cesium"],
+  "author": "",
+  "license": "ISC",
+  "devDependencies": {
+    "vite": "^latest"
+  }
+}
