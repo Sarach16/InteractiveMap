@@ -4,14 +4,22 @@
   "description": "Interactive Campus Map using CesiumJS",
   "main": "index.js",
   "scripts": {
-    "dev": "vite src",
-    "build": "vite build src",
-    "preview": "vite preview src"
+    "dev": "vite",
+    "build": "vite build",
+    "preview": "vite preview"
   },
-  "keywords": ["campus", "map", "cesium"],
+  "keywords": [
+    "campus",
+    "map",
+    "cesium"
+  ],
   "author": "",
   "license": "ISC",
   "devDependencies": {
-    "vite": "^latest"
+    "vite": "^5.4.15"
+  },
+  "dependencies": {
+    "cesium": "^1.127.0",
+    "vite-plugin-cesium": "^1.2.23"
   }
 }
