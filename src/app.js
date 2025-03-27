@@ -7,14 +7,16 @@ import {
   Math as CesiumMath,
   HeadingPitchRange,
   createGooglePhotorealistic3DTileset,
-  ShadowMode
+  ShadowMode,
+  Color,
+  ScreenSpaceEventHandler,
+  ScreenSpaceEventType,
+  LabelStyle,
+  VerticalOrigin
 } from 'cesium';
+import Papa from 'papaparse';
 
-
-
-
-
-// Set the Cesium Ion access token
+// !!Remove before Deployment Set the Cesium Ion access token
 Ion.defaultAccessToken = import.meta.env.VITE_CESIUM_ACCESS_TOKEN;
 console.log("Cesium is working!");
 console.log("Access token:", import.meta.env.VITE_CESIUM_ACCESS_TOKEN);
@@ -66,3 +68,88 @@ viewer.scene.screenSpaceCameraController.enableTranslate = true;
 viewer.scene.screenSpaceCameraController.enableZoom = true;
 viewer.scene.screenSpaceCameraController.minimumZoomDistance = 80;
 viewer.scene.screenSpaceCameraController.maximumZoomDistance = 1000;
+
+
+// Load the building data from CSV
+fetch('/data/mapData.csv')
+  .then(response => {
+    if (!response.ok) {
+      throw new Error(`HTTP error! status: ${response.status}`);
+    }
+    return response.text();
+  })
+  .then(csvText => {
+    console.log('CSV loaded successfully');
+    const parsedData = Papa.parse(csvText, { header: true });
+    console.log('Parsed CSV data:', parsedData.data.length, 'rows');
+
+    parsedData.data.forEach(building => {
+      if (building.Latitude && building.Longitude) {
+        const lat = parseFloat(building.Latitude);
+        const lon = parseFloat(building.Longitude);
+        console.log(`Creating entity for ${building.Name} at lat: ${lat}, lon: ${lon}`);
+        
+        viewer.entities.add({
+          name: building.Name,
+          position: Cartesian3.fromDegrees(lon, lat),
+          properties: {
+            number: building['Building Number'],
+            description: building.Description
+          },
+          billboard: {
+            image: 'data:image/svg+xml;base64,PHN2ZyB4bWxucz0iaHR0cDovL3d3dy53My5vcmcvMjAwMC9zdmciIHdpZHRoPSI0OCIgaGVpZ2h0PSI0OCIgdmlld0JveD0iMCAwIDQ4IDQ4Ij48Y2lyY2xlIGN4PSIyNCIgY3k9IjI0IiByPSIyNCIgZmlsbD0icmVkIiBmaWxsLW9wYWNpdHk9IjEiLz48L3N2Zz4=',
+            verticalOrigin: 0.5,
+            horizontalOrigin: 0.5,
+            scale: 1.0,
+            heightReference: 1
+          },
+          label: {
+            text: building.Name,
+            font: '14px sans-serif',
+            fillColor: Color.WHITE,
+            outlineColor: Color.BLACK,
+            outlineWidth: 2,
+            style: LabelStyle.FILL_AND_OUTLINE,
+            verticalOrigin: VerticalOrigin.BOTTOM,
+            pixelOffset: new Cartesian2(0, -10),
+            showBackground: true,
+            backgroundColor: new Color(0.165, 0.165, 0.165, 0.8)
+          }
+        });
+      }
+    });
+  })
+  .catch(error => {
+    console.error('Error loading CSV:', error);
+    console.error('Make sure the CSV file is in the public/data directory');
+  });
+
+// Add click handler to display building info
+const handler = new ScreenSpaceEventHandler(viewer.canvas);
+handler.setInputAction(click => {
+  console.log('Click detected at:', click.position);
+  const pickedObject = viewer.scene.pick(click.position);
+  console.log('Picked object:', pickedObject);
+  
+  if (pickedObject && pickedObject.id && pickedObject.id.properties) {
+    const { name, number, description } = pickedObject.id.properties;
+    console.log('Clicked building:', name);
+    alert(`Building: ${name}\nNumber: ${number}\nDescription: ${description}`);
+  } else {
+    console.log('No building picked at click location');
+  }
+}, ScreenSpaceEventType.LEFT_CLICK);
+
+// Add camera controls to help with debugging
+viewer.camera.setView({
+  destination: Cartesian3.fromDegrees(
+    CAMPUS_CENTER.longitude,
+    CAMPUS_CENTER.latitude,
+    1000
+  ),
+  orientation: {
+    heading: CesiumMath.toRadians(0),
+    pitch: CesiumMath.toRadians(-60),
+    roll: 0.0
+  }
+});
