@@ -109,7 +109,7 @@ function csvToGeoJson(csvData) {
 function buildCustomDescription(properties) {
   return `
     <div style="font-family: Arial, sans-serif; padding: 10px; max-width: 300px;">
-      <h2 style="color: #008000; margin-top: 0;">Building ${properties.buildingNumber}</h2>
+      <h2 style="color: #00685e; margin-top: 0;">Building ${properties.buildingNumber}</h2>
       <h3>${properties.name}</h3>
       <p>${properties.description}</p>
       <hr>
@@ -457,7 +457,6 @@ async function initialize() {
 // Set up a search function for buildings
 function setupBuildingSearch() {
   const searchInput = document.getElementById('location-search');
-  const searchButton = document.getElementById('search-btn');
   const searchResults = document.getElementById('search-results');
   let currentResults = [];
   let selectedIndex = -1;
@@ -558,19 +557,20 @@ function setupBuildingSearch() {
 
     // Select the entity to show its info
     viewer.selectedEntity = result.entity;
+    
+    // Clear the search input and hide the dropdown
+    searchInput.value = '';
+    searchResults.style.display = 'none';
   }
 
   // Event Listeners
-  if (searchInput && searchButton && searchResults) {
+  if (searchInput && searchResults) {
     // Search on input with debounce
     let debounceTimeout;
     searchInput.addEventListener('input', () => {
       clearTimeout(debounceTimeout);
       debounceTimeout = setTimeout(performSearch, 300);
     });
-
-    // Search button click
-    searchButton.addEventListener('click', performSearch);
 
     // Enter key support
     searchInput.addEventListener('keyup', (event) => {
@@ -608,7 +608,6 @@ function setupBuildingSearch() {
   } else {
     console.error('Search elements not found:', {
       searchInput: !!searchInput,
-      searchButton: !!searchButton,
       searchResults: !!searchResults
     });
   }
