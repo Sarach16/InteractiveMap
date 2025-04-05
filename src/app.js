@@ -26,8 +26,8 @@ console.log("Access token:", import.meta.env.VITE_CESIUM_ACCESS_TOKEN);
 
 // Grossmont College center
 const CAMPUS_CENTER = {
-  longitude: -117.00523,
-  latitude: 32.81547,
+  longitude: -117.00622799937369,
+  latitude: 32.813321272923574,
   altitude: 500
 };
 
