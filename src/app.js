@@ -40,13 +40,20 @@ const viewer = new Viewer('cesiumContainer', {
   terrain: Terrain.fromWorldTerrain(),
   baseLayerPicker: false,
   geocoder: false,
-  sceneModePicker: true,
+  sceneModePicker: false,
   navigationHelpButton: false,
-  shadows: false,                  // Disable shadows globally
-  terrainShadows: ShadowMode.DISABLED,  // Disable terrain shadows
-  timeline: false,
+  homeButton: false,
   animation: false,
-  infoBox: true
+  timeline: false,
+  fullscreenButton: false,
+  vrButton: false,
+  selectionIndicator: false,
+  infoBox: true,
+  shadows: false,
+  terrainShadows: ShadowMode.DISABLED,
+  requestRenderMode: true, // Only render when needed
+  maximumRenderTimeChange: 1000, // Limit render time
+  targetFrameRate: 30 // Target 30 FPS
 });
 
 console.log("Viewer initialized");
@@ -54,6 +61,10 @@ console.log("Viewer initialized");
 // Disable shadow effects for all primitives in the scene
 viewer.scene.globe.shadows = ShadowMode.DISABLED;
 viewer.scene.shadowMap.enabled = false;
+
+// Disable default click behavior for 3D Tiles
+viewer.screenSpaceEventHandler.removeInputAction(ScreenSpaceEventType.LEFT_CLICK);
+viewer.screenSpaceEventHandler.removeInputAction(ScreenSpaceEventType.LEFT_DOUBLE_CLICK);
 
 // Function to hide loading overlay
 function hideLoading() {
@@ -98,7 +109,7 @@ function csvToGeoJson(csvData) {
 function buildCustomDescription(properties) {
   return `
     <div style="font-family: Arial, sans-serif; padding: 10px; max-width: 300px;">
-      <h2 style="color: #003366; margin-top: 0;">Building ${properties.buildingNumber}</h2>
+      <h2 style="color: #008000; margin-top: 0;">Building ${properties.buildingNumber}</h2>
       <h3>${properties.name}</h3>
       <p>${properties.description}</p>
       <hr>
@@ -114,22 +125,41 @@ function buildCustomDescription(properties) {
 // Add custom building data
 async function addBuildingData() {
   try {
-    const response = await fetch('/data/mapData.csv');
-    if (!response.ok) {
-      throw new Error(`HTTP error! status: ${response.status}`);
+    // Check if we have cached data in localStorage
+    const cachedData = localStorage.getItem('buildingData');
+    let parsedData;
+    
+    if (cachedData) {
+      console.log('Using cached building data');
+      parsedData = JSON.parse(cachedData);
+    } else {
+      // Fetch and parse CSV data
+      const response = await fetch('/data/mapData.csv');
+      if (!response.ok) {
+        throw new Error(`HTTP error! status: ${response.status}`);
+      }
+      
+      const csvText = await response.text();
+      console.log('CSV loaded successfully');
+      
+      parsedData = Papa.parse(csvText, { header: true }).data;
+      console.log('Parsed CSV data:', parsedData.length, 'rows');
+      
+      // Cache the parsed data for future use
+      localStorage.setItem('buildingData', JSON.stringify(parsedData));
     }
-    
-    const csvText = await response.text();
-    console.log('CSV loaded successfully');
-    
-    const parsedData = Papa.parse(csvText, { header: true }).data;
-    console.log('Parsed CSV data:', parsedData.length, 'rows');
     
     // Convert to GeoJSON
     const geojsonData = csvToGeoJson(parsedData);
     
-    // Create data source
-    const buildingSource = await GeoJsonDataSource.load(geojsonData);
+    // Create data source with chunking for large datasets
+    const buildingSource = await GeoJsonDataSource.load(geojsonData, {
+      maxPoints: 100, // Process in chunks of 100 points
+      stroke: Color.HOTPINK,
+      fill: Color.PINK.withAlpha(0.5),
+      strokeWidth: 3,
+      markerSymbol: '?'
+    });
     
     // Customize entities
     buildingSource.entities.values.forEach(entity => {
@@ -139,24 +169,13 @@ async function addBuildingData() {
       // Set description
       entity.description = buildCustomDescription(properties);
       
-      // Replace the default point with a better visualized entity
-      entity.billboard = {
-        image: '/images/building-icon.png',
-        verticalOrigin: 0.5,
-        horizontalOrigin: 0.5,
-        scale: 0.5,
-        color: Color.WHITE,  // Use a single color for all buildings
-        heightReference: 1,
-        shadows: ShadowMode.DISABLED
-      };
-      
       // Add a label with building number
       entity.label = {
         text: buildingId,
         font: '14pt sans-serif',
         style: 0,
-        fillColor: Color.WHITE,
-        outlineColor: Color.BLACK,
+        fillColor: Color.BLACK,
+        outlineColor: Color.WHITE,
         outlineWidth: 2,
         verticalOrigin: 0,
         pixelOffset: new Cartesian3(0, -30),
@@ -185,92 +204,165 @@ function setupClickHandlerForOsmBuildings() {
     const pickedFeature = viewer.scene.pick(click.position);
     
     if (pickedFeature && pickedFeature.id) {
-      // We already handle entities with the standard Cesium handling
+      // Only handle our custom entities
+      if (pickedFeature.id.properties && pickedFeature.id.properties.buildingNumber) {
+        viewer.selectedEntity = pickedFeature.id;
+      } else {
+        // Clear selection for non-custom entities
+        viewer.selectedEntity = undefined;
+      }
       return;
     }
     
+    // Clear selection for any other clicks
+    viewer.selectedEntity = undefined;
+    
     // For OSM buildings or other primitive features
     if (pickedFeature && pickedFeature.primitive) {
-      console.log('Picked OSM building:', pickedFeature);
-      
-      // You can add custom handling for OSM buildings here
-      // For example, show a modal with a form to add this building to your database
-      
-      // Example: Show coordinates of clicked building
-      const cartesian = viewer.scene.pickPosition(click.position);
-      if (cartesian) {
-        const cartographic = Cesium.Cartographic.fromCartesian(cartesian);
-        const longitude = Cesium.Math.toDegrees(cartographic.longitude);
-        const latitude = Cesium.Math.toDegrees(cartographic.latitude);
-        
-        console.log(`OSM Building at: Lat ${latitude.toFixed(6)}, Lon ${longitude.toFixed(6)}`);
-        
-        // Optional: Show a custom popup for unlabeled buildings
-        showUnlabeledBuildingPopup(cartesian, longitude, latitude);
-      }
+      // Just log the click for debugging purposes
+      console.log('Picked OSM building (no info displayed)');
     }
   }, ScreenSpaceEventType.LEFT_CLICK);
 }
 
-// Function to show a popup for unlabeled buildings
-function showUnlabeledBuildingPopup(position, longitude, latitude) {
-  // Create a temporary entity to show info about the unlabeled building
-  const unlabeledEntity = viewer.entities.add({
-    position: position,
-    name: 'Unlabeled Building',
-    description: `
-      <div style="font-family: Arial, sans-serif; padding: 10px;">
-        <h2 style="color: #003366;">Unlabeled Building</h2>
-        <p>This building doesn't have custom information yet.</p>
-        <p>Coordinates: ${latitude.toFixed(6)}, ${longitude.toFixed(6)}</p>
-        <p>You can add this building to your database to customize the information.</p>
-      </div>
-    `,
-    billboard: {
-      image: '/images/unlabeled-building-icon.png', // Create this icon
-      scale: 0.5,
-      shadows: ShadowMode.DISABLED  // Disable shadows for this billboard
-    }
+// Function to return to the initial view
+function returnToInitialView() {
+  viewer.camera.flyTo({
+    destination: Cartesian3.fromDegrees(
+      CAMPUS_CENTER.longitude,
+      CAMPUS_CENTER.latitude,
+      500
+    ),
+    orientation: {
+      heading: CesiumMath.toRadians(0),
+      pitch: CesiumMath.toRadians(-45),
+      roll: 0.0
+    },
+    duration: 2
   });
-  
-  // Select this entity to show the infobox
-  viewer.selectedEntity = unlabeledEntity;
-  
-  // Remove after a while to avoid cluttering the map
-  setTimeout(() => {
-    viewer.entities.remove(unlabeledEntity);
-  }, 30000); // Remove after 30 seconds
+}
+
+// Function to update loading message and progress
+function updateLoadingMessage(message, progress) {
+  const loadingOverlay = document.getElementById('loadingOverlay');
+  if (loadingOverlay) {
+    const h1Element = loadingOverlay.querySelector('h1');
+    if (h1Element) {
+      h1Element.textContent = message;
+    }
+    
+    // Update progress bar if provided
+    if (progress !== undefined) {
+      const progressBar = document.getElementById('loadingBar');
+      if (progressBar) {
+        progressBar.style.width = `${progress}%`;
+      }
+    }
+  }
+}
+
+// Set up location tracking
+function setupLocationTracking() {
+  const locationButton = document.getElementById('location-btn');
+  let watchId = null;
+  let locationEntity = null;
+
+  function updateLocation(position) {
+    const { latitude, longitude } = position.coords;
+    
+    // Remove existing location entity if it exists
+    if (locationEntity) {
+      viewer.entities.remove(locationEntity);
+    }
+
+    // Create new location entity
+    locationEntity = viewer.entities.add({
+      position: Cartesian3.fromDegrees(longitude, latitude),
+      point: {
+        pixelSize: 20,
+        color: Color.fromCssColorString('#4CAF50'),
+        outlineColor: Color.WHITE,
+        outlineWidth: 2,
+        heightReference: 1
+      },
+      ellipse: {
+        semiMinorAxis: 15,
+        semiMajorAxis: 15,
+        material: new ColorMaterialProperty(Color.fromCssColorString('#4CAF50').withAlpha(0.3)),
+        heightReference: 1
+      },
+      label: {
+        text: 'You are here',
+        font: '16px sans-serif',
+        style: 0,
+        fillColor: Color.WHITE,
+        outlineColor: Color.BLACK,
+        outlineWidth: 2,
+        verticalOrigin: 1,
+        pixelOffset: new Cartesian3(0, -30),
+        heightReference: 1,
+        showBackground: true,
+        backgroundColor: Color.fromCssColorString('#4CAF50').withAlpha(0.7),
+        disableDepthTestDistance: Number.POSITIVE_INFINITY
+      }
+    });
+
+    // Fly to location
+    viewer.camera.flyTo({
+      destination: Cartesian3.fromDegrees(longitude, latitude, 200),
+      orientation: {
+        heading: CesiumMath.toRadians(0),
+        pitch: CesiumMath.toRadians(-45),
+        roll: 0.0
+      },
+      duration: 1
+    });
+  }
+
+  function handleError(error) {
+    console.error('Error getting location:', error);
+    alert('Unable to get your location. Please check your location permissions.');
+    locationButton.classList.remove('active');
+    if (watchId) {
+      navigator.geolocation.clearWatch(watchId);
+      watchId = null;
+    }
+  }
+
+  if (locationButton) {
+    locationButton.addEventListener('click', () => {
+      if (!watchId) {
+        // Start tracking
+        if (navigator.geolocation) {
+          locationButton.classList.add('active');
+          // Get initial position
+          navigator.geolocation.getCurrentPosition(updateLocation, handleError);
+          // Start watching position
+          watchId = navigator.geolocation.watchPosition(updateLocation, handleError);
+        } else {
+          alert('Geolocation is not supported by your browser');
+        }
+      } else {
+        // Stop tracking
+        locationButton.classList.remove('active');
+        navigator.geolocation.clearWatch(watchId);
+        watchId = null;
+        if (locationEntity) {
+          viewer.entities.remove(locationEntity);
+          locationEntity = null;
+        }
+      }
+    });
+  }
 }
 
 // Initialize application
 async function initialize() {
   try {
-    // Load tilesets
-    const [photorealisticTileset, osmBuildingsTileset] = await Promise.all([
-      createGooglePhotorealistic3DTileset(),
-      createOsmBuildingsAsync()
-    ]);
+    // Update loading message
+    updateLoadingMessage("Loading basic map...", 10);
     
-    console.log("Tilesets loaded successfully");
-    viewer.scene.primitives.add(photorealisticTileset);
-    viewer.scene.primitives.add(osmBuildingsTileset);
-    
-    // Disable shadows for OSM buildings tileset
-    osmBuildingsTileset.shadows = ShadowMode.DISABLED;
-    
-    // Make OSM buildings selectable and modify style (including shadow properties)
-    osmBuildingsTileset.style = new Cesium.Cesium3DTileStyle({
-      color: 'color("white", 0.7)',
-      show: true
-    });
-    
-    // Disable shadows for photorealistic tileset
-    photorealisticTileset.shadows = ShadowMode.DISABLED;
-    
-    // Add building data
-    await addBuildingData();
-    
-    // Set initial view
+    // Set initial view first so user sees something quickly
     viewer.camera.flyTo({
       destination: Cartesian3.fromDegrees(
         CAMPUS_CENTER.longitude,
@@ -282,12 +374,79 @@ async function initialize() {
         pitch: CesiumMath.toRadians(-45),
         roll: 0.0
       },
-      duration: 0,
-      complete: hideLoading
+      duration: 0
     });
+    
+    updateLoadingMessage("Loading 3D buildings...", 30);
+    
+    // Load photorealistic tileset with lower initial detail
+    const photorealisticTileset = await createGooglePhotorealistic3DTileset({
+      maximumScreenSpaceError: 16 // Start with lower detail
+    });
+    
+    viewer.scene.primitives.add(photorealisticTileset);
+    photorealisticTileset.shadows = ShadowMode.DISABLED;
+    
+    updateLoadingMessage("Loading Grossmont College Map...", 50);
+    
+    // Load OSM buildings with lower initial detail
+    const osmBuildingsTileset = await createOsmBuildingsAsync({
+      maximumScreenSpaceError: 16 // Start with lower detail
+    });
+    
+    viewer.scene.primitives.add(osmBuildingsTileset);
+    osmBuildingsTileset.shadows = ShadowMode.DISABLED;
+    
+    // Make OSM buildings non-selectable and modify style
+    osmBuildingsTileset.style = new Cesium.Cesium3DTileStyle({
+      color: 'color("white", 0.7)',
+      show: true
+    });
+    
+    // Disable feature selection for OSM buildings
+    osmBuildingsTileset.showOutline = false;
+    osmBuildingsTileset.showBoundingVolume = false;
+    osmBuildingsTileset.showContentBoundingVolume = false;
+    osmBuildingsTileset.showRenderingStatistics = false;
+    osmBuildingsTileset.debugShowRenderingStatistics = false;
+    osmBuildingsTileset.debugShowBoundingVolume = false;
+    osmBuildingsTileset.debugShowContentBoundingVolume = false;
+    osmBuildingsTileset.debugShowRenderingTiles = false;
+    osmBuildingsTileset.debugShowGeometryBoundingVolume = false;
+    
+    console.log("Tilesets loaded successfully");
+    
+    // Gradually increase detail level
+    setTimeout(() => {
+      photorealisticTileset.maximumScreenSpaceError = 8;
+      osmBuildingsTileset.maximumScreenSpaceError = 8;
+    }, 2000);
+    
+    // Add building data
+    updateLoadingMessage("Loading building information...", 70);
+    await addBuildingData();
+    
+    updateLoadingMessage("Setting up controls...", 90);
+    
+    // Set up home button functionality
+    setupHomeButton();
     
     // Add search functionality
     setupBuildingSearch();
+
+    // Add location tracking
+    setupLocationTracking();
+    
+    // Final detail level increase
+    setTimeout(() => {
+      photorealisticTileset.maximumScreenSpaceError = 4;
+      osmBuildingsTileset.maximumScreenSpaceError = 4;
+    }, 4000);
+    
+    updateLoadingMessage("Ready!", 100);
+    
+    // Hide loading overlay when everything is ready
+    setTimeout(hideLoading, 500);
     
   } catch (error) {
     console.error("Initialization error:", error);
@@ -298,48 +457,168 @@ async function initialize() {
 // Set up a search function for buildings
 function setupBuildingSearch() {
   const searchInput = document.getElementById('location-search');
-  const searchButton = document.getElementById('search-button');
-  
-  if (searchInput && searchButton) {
-    searchButton.addEventListener('click', () => {
-      const searchText = searchInput.value.toLowerCase();
+  const searchButton = document.getElementById('search-btn');
+  const searchResults = document.getElementById('search-results');
+  let currentResults = [];
+  let selectedIndex = -1;
+
+  // Fuzzy search function
+  function fuzzySearch(text, search) {
+    if (!text || !search) return 0;
+    const searchLower = search.toLowerCase();
+    const textLower = text.toLowerCase();
+    
+    // Exact match
+    if (textLower.includes(searchLower)) return 1;
+    
+    // Fuzzy match (check if all characters are in order)
+    let j = 0;
+    for (let i = 0; i < textLower.length && j < searchLower.length; i++) {
+      if (textLower[i] === searchLower[j]) j++;
+    }
+    return j === searchLower.length ? 0.5 : 0;
+  }
+
+  function performSearch() {
+    const searchText = searchInput.value.toLowerCase();
+    if (!searchText) {
+      searchResults.style.display = 'none';
+      return;
+    }
+
+    // Search all entities
+    currentResults = [];
+    const dataSource = viewer.dataSources.get(0);
+    
+    if (!dataSource) {
+      console.error('No data source found');
+      return;
+    }
+
+    dataSource.entities.values.forEach(entity => {
+      const name = entity.properties.name?.getValue() || '';
+      const buildingNumber = entity.properties.buildingNumber?.getValue() || '';
+      const description = entity.properties.description?.getValue() || '';
       
-      if (!searchText) return;
+      const nameScore = fuzzySearch(name, searchText);
+      const numberScore = fuzzySearch(buildingNumber, searchText);
+      const descScore = fuzzySearch(description, searchText);
       
-      // Search all entities
-      let found = false;
-      viewer.dataSources.get(0)?.entities.values.forEach(entity => {
-        const name = entity.properties.name?.getValue().toLowerCase() || '';
-        const buildingNumber = entity.properties.buildingNumber?.getValue().toLowerCase() || '';
-        const description = entity.properties.description?.getValue().toLowerCase() || '';
-        
-        if (name.includes(searchText) || 
-            buildingNumber.includes(searchText) || 
-            description.includes(searchText)) {
-          
-          found = true;
-          // Fly to the building
-          viewer.flyTo(entity, {
-            duration: 2,
-            offset: new HeadingPitchRange(0, -CesiumMath.toRadians(45), 200)
-          });
-          
-          // Select the entity to show its info
-          viewer.selectedEntity = entity;
-        }
-      });
+      const maxScore = Math.max(nameScore, numberScore, descScore);
       
-      if (!found) {
-        alert('Building not found. Try a different search term.');
+      if (maxScore > 0) {
+        currentResults.push({
+          entity,
+          score: maxScore,
+          name,
+          buildingNumber,
+          description
+        });
       }
     });
+
+    // Sort results by score
+    currentResults.sort((a, b) => b.score - a.score);
+
+    // Display results
+    if (currentResults.length > 0) {
+      searchResults.innerHTML = currentResults
+        .map((result, index) => `
+          <div class="search-result" data-index="${index}">
+            <strong>${result.name} (Building ${result.buildingNumber})</strong>
+            <span>${result.description}</span>
+          </div>
+        `)
+        .join('');
+      searchResults.style.display = 'block';
+      selectedIndex = -1;
+    } else {
+      searchResults.innerHTML = '<div class="no-results">No buildings found</div>';
+      searchResults.style.display = 'block';
+    }
+  }
+
+  function selectResult(index) {
+    if (index < 0 || index >= currentResults.length) return;
     
-    // Add enter key support
+    const result = currentResults[index];
+    selectedIndex = index;
+
+    // Update visual selection
+    const results = searchResults.getElementsByClassName('search-result');
+    Array.from(results).forEach((el, i) => {
+      el.style.backgroundColor = i === index ? '#e3f2fd' : '';
+    });
+
+    // Fly to the building
+    viewer.flyTo(result.entity, {
+      duration: 2,
+      offset: new HeadingPitchRange(0, -CesiumMath.toRadians(45), 200)
+    });
+
+    // Select the entity to show its info
+    viewer.selectedEntity = result.entity;
+  }
+
+  // Event Listeners
+  if (searchInput && searchButton && searchResults) {
+    // Search on input with debounce
+    let debounceTimeout;
+    searchInput.addEventListener('input', () => {
+      clearTimeout(debounceTimeout);
+      debounceTimeout = setTimeout(performSearch, 300);
+    });
+
+    // Search button click
+    searchButton.addEventListener('click', performSearch);
+
+    // Enter key support
     searchInput.addEventListener('keyup', (event) => {
       if (event.key === 'Enter') {
-        searchButton.click();
+        if (selectedIndex === -1 && currentResults.length > 0) {
+          selectResult(0);
+        }
+      } else if (event.key === 'ArrowDown') {
+        event.preventDefault();
+        selectResult(Math.min(selectedIndex + 1, currentResults.length - 1));
+      } else if (event.key === 'ArrowUp') {
+        event.preventDefault();
+        selectResult(Math.max(selectedIndex - 1, 0));
+      } else if (event.key === 'Escape') {
+        searchResults.style.display = 'none';
+        selectedIndex = -1;
       }
     });
+
+    // Click on search results
+    searchResults.addEventListener('click', (event) => {
+      const result = event.target.closest('.search-result');
+      if (result) {
+        const index = parseInt(result.dataset.index);
+        selectResult(index);
+      }
+    });
+
+    // Close search results when clicking outside
+    document.addEventListener('click', (event) => {
+      if (!searchInput.contains(event.target) && !searchResults.contains(event.target)) {
+        searchResults.style.display = 'none';
+      }
+    });
+  } else {
+    console.error('Search elements not found:', {
+      searchInput: !!searchInput,
+      searchButton: !!searchButton,
+      searchResults: !!searchResults
+    });
+  }
+}
+
+// Set up home button functionality
+function setupHomeButton() {
+  const homeButton = document.getElementById('home-btn');
+  if (homeButton) {
+    homeButton.addEventListener('click', returnToInitialView);
   }
 }
 

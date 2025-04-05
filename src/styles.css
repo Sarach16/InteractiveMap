@@ -19,49 +19,231 @@ html, body {
     height: 100%;
 }
 
+/* Mobile-friendly search container */
 #search-container {
     position: absolute;
-    top: 20px;
-    left: 20px;
+    top: 10px;
+    left: 50%;
+    transform: translateX(-50%);
     z-index: 1000;
     background: white;
     padding: 10px;
-    border-radius: 5px;
-    box-shadow: 0 2px 10px rgba(0,0,0,0.1);
+    border-radius: 25px;
+    box-shadow: 0 2px 10px rgba(0,0,0,0.2);
+    width: calc(100% - 40px);
+    max-width: 600px;
+    display: flex;
+    flex-wrap: wrap;
+    gap: 8px;
 }
 
 #location-search {
-    width: 250px;
-    padding: 5px;
-    margin-right: 10px;
+    flex: 1;
+    min-width: 200px;
+    padding: 12px 16px;
+    border: 1px solid #ccc;
+    border-radius: 20px;
+    font-size: 16px;
+    outline: none;
 }
 
-#loadingOverlay {
+#search-btn, #directions-btn {
+    padding: 12px 20px;
+    background-color: #4CAF50;
+    color: white;
+    border: none;
+    border-radius: 20px;
+    cursor: pointer;
+    font-size: 16px;
+    transition: background-color 0.3s;
+    white-space: nowrap;
+}
+
+#search-btn:hover, #directions-btn:hover {
+    background-color: #45a049;
+}
+
+#search-results {
     position: absolute;
+    top: 100%;
+    left: 0;
+    right: 0;
+    background: white;
+    border-radius: 15px;
+    box-shadow: 0 4px 8px rgba(0,0,0,0.1);
+    max-height: 50vh;
+    overflow-y: auto;
+    display: none;
+    margin-top: 8px;
+    z-index: 1001;
+}
+
+.search-result {
+    padding: 15px;
+    cursor: pointer;
+    border-bottom: 1px solid #eee;
+    transition: background-color 0.2s;
+}
+
+.search-result:last-child {
+    border-bottom: none;
+}
+
+.search-result:hover {
+    background-color: #f5f5f5;
+}
+
+.search-result strong {
+    display: block;
+    color: #333;
+    font-size: 16px;
+    margin-bottom: 4px;
+}
+
+.search-result span {
+    color: #666;
+    font-size: 14px;
+}
+
+.no-results {
+    padding: 20px;
+    text-align: center;
+    color: #666;
+    font-size: 16px;
+}
+
+/* Mobile-friendly toolbar */
+#toolbar {
+    position: fixed;
+    bottom: 20px;
+    right: 20px;
+    z-index: 1000;
+    display: flex;
+    flex-direction: column;
+    gap: 10px;
+}
+
+#home-btn, #location-btn {
+    width: 56px;
+    height: 56px;
+    padding: 0;
+    background-color: white;
+    border: none;
+    border-radius: 50%;
+    cursor: pointer;
+    display: flex;
+    align-items: center;
+    justify-content: center;
+    box-shadow: 0 2px 10px rgba(0,0,0,0.2);
+    transition: all 0.3s ease;
+}
+
+#home-btn:hover, #location-btn:hover {
+    background-color: #4CAF50;
+    transform: scale(1.1);
+}
+
+#home-btn i, #location-btn i {
+    font-size: 24px;
+    color: #4CAF50;
+    transition: color 0.3s ease;
+}
+
+#home-btn:hover i, #location-btn:hover i {
+    color: white;
+}
+
+#location-btn.active {
+    background-color: #4CAF50;
+}
+
+#location-btn.active i {
+    color: white;
+}
+
+/* Loading overlay */
+#loadingOverlay {
+    position: fixed;
     top: 0;
     left: 0;
     width: 100%;
     height: 100%;
-    background: rgba(0, 0, 0, 0.5);
+    background: rgba(0, 0, 0, 0.8);
     display: flex;
+    flex-direction: column;
     justify-content: center;
     align-items: center;
-    z-index: 999;
+    z-index: 9999;
+}
+
+#loadingProgress {
+    width: 80%;
+    max-width: 300px;
+    height: 4px;
+    background-color: rgba(255, 255, 255, 0.2);
+    border-radius: 2px;
+    margin-top: 20px;
+    overflow: hidden;
+}
+
+#loadingBar {
+    height: 100%;
+    width: 0%;
+    background-color: #4CAF50;
+    transition: width 0.3s ease-in-out;
 }
 
 #loadingOverlay h1 {
     color: white;
     font-family: Arial, sans-serif;
+    font-size: 24px;
+    margin: 0;
+    text-align: center;
+    padding: 0 20px;
 }
 
-#toolbar {
-    position: absolute;
-    top: 20px;
-    right: 20px;
-    z-index: 1000;
-    background: white;
-    padding: 10px;
-    border-radius: 5px;
-    box-shadow: 0 2px 10px rgba(0,0,0,0.1);
+/* Media queries for responsive design */
+@media (max-width: 768px) {
+    #search-container {
+        padding: 8px;
+        border-radius: 20px;
+    }
+
+    #location-search {
+        padding: 10px 14px;
+        font-size: 14px;
+    }
+
+    #search-btn, #directions-btn {
+        padding: 10px 16px;
+        font-size: 14px;
+    }
+
+    .search-result strong {
+        font-size: 14px;
+    }
+
+    .search-result span {
+        font-size: 12px;
+    }
+}
+
+/* Scrollbar styling */
+#search-results::-webkit-scrollbar {
+    width: 8px;
+}
+
+#search-results::-webkit-scrollbar-track {
+    background: #f1f1f1;
+    border-radius: 4px;
+}
+
+#search-results::-webkit-scrollbar-thumb {
+    background: #888;
+    border-radius: 4px;
+}
+
+#search-results::-webkit-scrollbar-thumb:hover {
+    background: #555;
 }
 

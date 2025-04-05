@@ -5,17 +5,60 @@
     <meta name="viewport" content="width=device-width, initial-scale=1.0">
     <title>Campus Interactive Map</title>
     <link href="https://cdn.jsdelivr.net/npm/cesium@1.99/Build/Cesium/Widgets/widgets.css" rel="stylesheet">
+    <link rel="stylesheet" href="https://cdnjs.cloudflare.com/ajax/libs/font-awesome/6.0.0/css/all.min.css">
     <link rel="stylesheet" href="/styles.css">
+    
+    <!-- Preload critical resources -->
+    <link rel="preload" href="https://cdn.jsdelivr.net/npm/cesium@1.99/Build/Cesium/Cesium.js" as="script">
+    <link rel="preload" href="/images/building-icon.png" as="image">
+    <link rel="preload" href="/data/mapData.csv" as="fetch" crossorigin="anonymous">
+    
+    <!-- Add a loading indicator with progress -->
+    <style>
+        #loadingOverlay {
+            display: flex;
+            flex-direction: column;
+            align-items: center;
+            justify-content: center;
+        }
+        #loadingProgress {
+            width: 300px;
+            height: 20px;
+            background-color: #f0f0f0;
+            border-radius: 10px;
+            margin-top: 20px;
+            overflow: hidden;
+        }
+        #loadingBar {
+            height: 100%;
+            width: 0%;
+            background-color: #4CAF50;
+            transition: width 0.3s ease-in-out;
+        }
+    </style>
 </head>
 <body>
     <div id="search-container">
         <input type="text" id="location-search" placeholder="Search locations...">
         <button id="search-btn">Search</button>
         <button id="directions-btn">Get Directions</button>
+        <div id="search-results"></div>
     </div>
     <div id="cesiumContainer" class="fullSize"></div>
-    <div id="loadingOverlay"><h1>Loading...</h1></div>
-    <div id="toolbar"></div>
+    <div id="loadingOverlay">
+        <h1>Loading...</h1>
+        <div id="loadingProgress">
+            <div id="loadingBar"></div>
+        </div>
+    </div>
+    <div id="toolbar">
+        <button id="home-btn" title="Return to initial view">
+            <i class="fas fa-home"></i>
+        </button>
+        <button id="location-btn" title="Show my location">
+            <i class="fas fa-location-dot"></i>
+        </button>
+    </div>
 
     <script src="https://cdn.jsdelivr.net/npm/cesium@1.99/Build/Cesium/Cesium.js"></script>
     <script type="module" src="./src/app.js"></script>
