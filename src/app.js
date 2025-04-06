@@ -22,7 +22,6 @@ import Papa from 'papaparse';
 // !!Remove before Deployment Set the Cesium Ion access token
 Ion.defaultAccessToken = import.meta.env.VITE_CESIUM_ACCESS_TOKEN;
 console.log("Cesium is working!");
-console.log("Access token:", import.meta.env.VITE_CESIUM_ACCESS_TOKEN);
 
 // Grossmont College center
 const CAMPUS_CENTER = {

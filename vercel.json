@@ -1,0 +1,6 @@
+{
+  "buildCommand": "npm run build",
+  "outputDirectory": "dist",
+  "framework": "vite",
+  "installCommand": "npm install --no-optional && npm install @rollup/rollup-linux-x64-musl"
+} 

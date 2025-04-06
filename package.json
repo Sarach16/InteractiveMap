@@ -22,5 +22,8 @@
     "cesium": "^1.127.0",
     "papaparse": "^5.5.2",
     "vite-plugin-cesium": "^1.2.23"
+  },
+  "optionalDependencies": {
+    "@rollup/rollup-linux-x64-musl": "latest"
   }
 }
