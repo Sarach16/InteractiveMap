@@ -3,9 +3,21 @@
   "outputDirectory": "dist",
   "framework": "vite",
   "installCommand": "npm install --no-optional && npm install @rollup/rollup-linux-x64-musl",
-  "routes": [
-    { "handle": "filesystem" },
-    { "src": "/data/(.*)", "dest": "/data/$1" },
-    { "src": "/(.*)", "dest": "/index.html" }
+  "rewrites": [
+    { "source": "/data/:path*", "destination": "/data/:path*" },
+    { "source": "/Workers/:path*", "destination": "/Workers/:path*" },
+    { "source": "/Assets/:path*", "destination": "/Assets/:path*" },
+    { "source": "/ThirdParty/:path*", "destination": "/ThirdParty/:path*" },
+    { "source": "/Build/Cesium/:path*", "destination": "/Build/Cesium/:path*" },
+    { "source": "/(.*)", "destination": "/index.html" }
+  ],
+  "headers": [
+    {
+      "source": "/(.*)",
+      "headers": [
+        { "key": "Cross-Origin-Opener-Policy", "value": "same-origin" },
+        { "key": "Cross-Origin-Embedder-Policy", "value": "require-corp" }
+      ]
+    }
   ]
 } 

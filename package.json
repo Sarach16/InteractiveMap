@@ -16,12 +16,12 @@
   "author": "",
   "license": "ISC",
   "devDependencies": {
-    "vite": "^5.4.15"
+    "vite": "^5.4.15",
+    "vite-plugin-cesium": "^1.2.23"
   },
   "dependencies": {
     "cesium": "^1.127.0",
-    "papaparse": "^5.5.2",
-    "vite-plugin-cesium": "^1.2.23"
+    "papaparse": "^5.5.2"
   },
   "optionalDependencies": {
     "@rollup/rollup-linux-x64-musl": "latest"

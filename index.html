@@ -3,14 +3,13 @@
 <head>
     <meta charset="UTF-8">
     <meta name="viewport" content="width=device-width, initial-scale=1.0">
+    <base href="/">
     <title>Campus Interactive Map</title>
-    <link href="https://cdn.jsdelivr.net/npm/cesium@1.99/Build/Cesium/Widgets/widgets.css" rel="stylesheet">
+    <!-- We'll let vite-plugin-cesium handle Cesium resources -->
     <link rel="stylesheet" href="https://cdnjs.cloudflare.com/ajax/libs/font-awesome/6.0.0/css/all.min.css">
     <link rel="stylesheet" href="./styles.css">
     
-    <!-- Preload critical resources -->
-    <link rel="preload" href="https://cdn.jsdelivr.net/npm/cesium@1.99/Build/Cesium/Cesium.js" as="script">
-    <!-- <link rel="preload" href="/images/building-icon.png" as="image"> -->
+    <!-- Preload data resources -->
     <link rel="preload" href="./data/mapData.csv" as="fetch" crossorigin="anonymous">
     
     <!-- Add a loading indicator with progress -->
@@ -59,7 +58,6 @@
         </button>
     </div>
 
-    <script src="https://cdn.jsdelivr.net/npm/cesium@1.99/Build/Cesium/Cesium.js"></script>
     <script type="module" src="./src/app.js"></script>
 </body>
 </html>

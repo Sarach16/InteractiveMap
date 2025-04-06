@@ -1,4 +1,5 @@
 import './styles.css';
+// Import Cesium directly - vite-plugin-cesium will handle it
 import * as Cesium from 'cesium';
 import Papa from 'papaparse';
 
@@ -462,51 +463,57 @@ async function initialize() {
     updateLoadingMessage("Loading 3D buildings...", 30);
     
     try {
-      // Load photorealistic tileset with lower initial detail
-      const photorealisticTileset = await createGooglePhotorealistic3DTileset({
-        maximumScreenSpaceError: 16 // Start with lower detail
-      });
+      // Load photorealistic tileset with error handling
+      try {
+        // Load photorealistic tileset with lower initial detail
+        const photorealisticTileset = await Cesium.createGooglePhotorealistic3DTileset({
+          maximumScreenSpaceError: 16 // Start with lower detail
+        });
+        
+        viewer.scene.primitives.add(photorealisticTileset);
+        photorealisticTileset.shadows = ShadowMode.DISABLED;
+        console.log('Photorealistic tileset loaded');
+      } catch (tilesetError) {
+        console.error('Error loading photorealistic tileset:', tilesetError);
+        // Continue even if tileset fails to load
+      }
       
-      viewer.scene.primitives.add(photorealisticTileset);
-      photorealisticTileset.shadows = ShadowMode.DISABLED;
-      console.log('Photorealistic tileset loaded');
-    } catch (tilesetError) {
-      console.error('Error loading photorealistic tileset:', tilesetError);
-      // Continue even if tileset fails to load
-    }
-    
-    updateLoadingMessage("Loading Grossmont College Map...", 50);
-    
-    try {
-      // Load OSM buildings with lower initial detail
-      const osmBuildingsTileset = await createOsmBuildingsAsync({
-        maximumScreenSpaceError: 16 // Start with lower detail
-      });
+      updateLoadingMessage("Loading Grossmont College Map...", 50);
       
-      viewer.scene.primitives.add(osmBuildingsTileset);
-      osmBuildingsTileset.shadows = ShadowMode.DISABLED;
-      
-      // Make OSM buildings non-selectable and modify style
-      osmBuildingsTileset.style = new Cesium.Cesium3DTileStyle({
-        color: 'color("white", 0.7)',
-        show: true
-      });
-      
-      // Disable feature selection for OSM buildings
-      osmBuildingsTileset.showOutline = false;
-      osmBuildingsTileset.showBoundingVolume = false;
-      osmBuildingsTileset.showContentBoundingVolume = false;
-      osmBuildingsTileset.showRenderingStatistics = false;
-      osmBuildingsTileset.debugShowRenderingStatistics = false;
-      osmBuildingsTileset.debugShowBoundingVolume = false;
-      osmBuildingsTileset.debugShowContentBoundingVolume = false;
-      osmBuildingsTileset.debugShowRenderingTiles = false;
-      osmBuildingsTileset.debugShowGeometryBoundingVolume = false;
-      
-      console.log("OSM Buildings tileset loaded successfully");
-    } catch (osmError) {
-      console.error('Error loading OSM buildings:', osmError);
-      // Continue even if OSM buildings fail to load
+      try {
+        // Load OSM buildings with lower initial detail
+        const osmBuildingsTileset = await Cesium.createOsmBuildingsAsync({
+          maximumScreenSpaceError: 16 // Start with lower detail
+        });
+        
+        viewer.scene.primitives.add(osmBuildingsTileset);
+        osmBuildingsTileset.shadows = ShadowMode.DISABLED;
+        
+        // Make OSM buildings non-selectable and modify style
+        osmBuildingsTileset.style = new Cesium.Cesium3DTileStyle({
+          color: 'color("white", 0.7)',
+          show: true
+        });
+        
+        // Disable feature selection for OSM buildings
+        osmBuildingsTileset.showOutline = false;
+        osmBuildingsTileset.showBoundingVolume = false;
+        osmBuildingsTileset.showContentBoundingVolume = false;
+        osmBuildingsTileset.showRenderingStatistics = false;
+        osmBuildingsTileset.debugShowRenderingStatistics = false;
+        osmBuildingsTileset.debugShowBoundingVolume = false;
+        osmBuildingsTileset.debugShowContentBoundingVolume = false;
+        osmBuildingsTileset.debugShowRenderingTiles = false;
+        osmBuildingsTileset.debugShowGeometryBoundingVolume = false;
+        
+        console.log("OSM Buildings tileset loaded successfully");
+      } catch (osmError) {
+        console.error('Error loading OSM buildings:', osmError);
+        // Continue even if OSM buildings fail to load
+      }
+    } catch (error) {
+      console.error('Error loading 3D buildings:', error);
+      // Continue with the rest of the initialization
     }
     
     // Gradually increase detail level
