@@ -174,12 +174,16 @@ async function addBuildingData() {
         text: buildingId,
         font: '14pt sans-serif',
         style: 0,
-        fillColor: Color.BLACK,
-        outlineColor: Color.WHITE,
+        fillColor: Color.WHITE,
+        outlineColor: Color.BLACK,
         outlineWidth: 2,
         verticalOrigin: 0,
         pixelOffset: new Cartesian3(0, -30),
-        heightReference: 1
+        heightReference: 1,
+        showBackground: true,
+        backgroundColor: Color.fromCssColorString('#00685e').withAlpha(0.7),
+        backgroundPadding: new Cartesian3(7, 5),
+        disableDepthTestDistance: Number.POSITIVE_INFINITY
       };
     });
     
@@ -448,6 +452,13 @@ async function initialize() {
     // Hide loading overlay when everything is ready
     setTimeout(hideLoading, 500);
     
+    // Limit camera movement
+    viewer.scene.screenSpaceCameraController.enableRotate = true;
+    viewer.scene.screenSpaceCameraController.enableTranslate = true;
+    viewer.scene.screenSpaceCameraController.enableZoom = true;
+    viewer.scene.screenSpaceCameraController.minimumZoomDistance = 80;
+    viewer.scene.screenSpaceCameraController.maximumZoomDistance = 2000;
+
   } catch (error) {
     console.error("Initialization error:", error);
     hideLoading();
@@ -620,13 +631,6 @@ function setupHomeButton() {
     homeButton.addEventListener('click', returnToInitialView);
   }
 }
-
-// Limit camera movement
-viewer.scene.screenSpaceCameraController.enableRotate = true;
-viewer.scene.screenSpaceCameraController.enableTranslate = true;
-viewer.scene.screenSpaceCameraController.enableZoom = true;
-viewer.scene.screenSpaceCameraController.minimumZoomDistance = 80;
-viewer.scene.screenSpaceCameraController.maximumZoomDistance = 2000;
 
 // Initialize the application
 initialize();
