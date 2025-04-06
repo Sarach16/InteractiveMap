@@ -2,5 +2,10 @@
   "buildCommand": "npm run build",
   "outputDirectory": "dist",
   "framework": "vite",
-  "installCommand": "npm install --no-optional && npm install @rollup/rollup-linux-x64-musl"
+  "installCommand": "npm install --no-optional && npm install @rollup/rollup-linux-x64-musl",
+  "routes": [
+    { "handle": "filesystem" },
+    { "src": "/data/(.*)", "dest": "/data/$1" },
+    { "src": "/(.*)", "dest": "/index.html" }
+  ]
 } 

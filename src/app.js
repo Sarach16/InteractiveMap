@@ -1,10 +1,14 @@
 import './styles.css';
-import {
+import * as Cesium from 'cesium';
+import Papa from 'papaparse';
+
+// Extract needed components from Cesium
+const {
   Viewer,
   Ion,
   IonImageryProvider,
   Cartesian3,
-  Math as CesiumMath,
+  Math: CesiumMath,
   HeadingPitchRange,
   createGooglePhotorealistic3DTileset,
   ShadowMode,
@@ -16,8 +20,7 @@ import {
   ScreenSpaceEventType,
   PolygonGraphics,
   ColorMaterialProperty
-} from 'cesium';
-import Papa from 'papaparse';
+} = Cesium;
 
 // !!Remove before Deployment Set the Cesium Ion access token
 Ion.defaultAccessToken = import.meta.env.VITE_CESIUM_ACCESS_TOKEN;
@@ -34,41 +37,96 @@ const CAMPUS_CENTER = {
 const loadingOverlay = document.getElementById('loadingOverlay');
 
 // Initialize the Cesium viewer
-const viewer = new Viewer('cesiumContainer', {
-  imageryProvider: new IonImageryProvider({ assetId: 2 }),
-  terrain: Terrain.fromWorldTerrain(),
-  baseLayerPicker: false,
-  geocoder: false,
-  sceneModePicker: false,
-  navigationHelpButton: false,
-  homeButton: false,
-  animation: false,
-  timeline: false,
-  fullscreenButton: false,
-  vrButton: false,
-  selectionIndicator: false,
-  infoBox: true,
-  shadows: false,
-  terrainShadows: ShadowMode.DISABLED,
-  requestRenderMode: true, // Only render when needed
-  maximumRenderTimeChange: 1000, // Limit render time
-  targetFrameRate: 30 // Target 30 FPS
-});
+try {
+  console.log("Initializing terrain...");
+  // Try different approaches to get the terrain provider working
+  let terrainProvider;
+  try {
+    console.log("Attempting to create terrain with WorldTerrain.fromUrl");
+    terrainProvider = Cesium.createWorldTerrain();
+    console.log("Terrain created with createWorldTerrain");
+  } catch (terrainError) {
+    console.error("First terrain approach failed:", terrainError);
+    try {
+      console.log("Attempting to create terrain with Cesium World Terrain asset ID");
+      terrainProvider = new Cesium.CesiumTerrainProvider({
+        url: Cesium.IonResource.fromAssetId(1)
+      });
+      console.log("Terrain created with CesiumTerrainProvider");
+    } catch (terrainError2) {
+      console.error("Second terrain approach failed:", terrainError2);
+      // Fall back to EllipsoidTerrainProvider
+      console.log("Falling back to EllipsoidTerrainProvider");
+      terrainProvider = new Cesium.EllipsoidTerrainProvider();
+    }
+  }
+  
+  const viewer = new Viewer('cesiumContainer', {
+    imageryProvider: new IonImageryProvider({ assetId: 2 }),
+    terrainProvider: terrainProvider,
+    baseLayerPicker: false,
+    geocoder: false,
+    sceneModePicker: false,
+    navigationHelpButton: false,
+    homeButton: false,
+    animation: false,
+    timeline: false,
+    fullscreenButton: false,
+    vrButton: false,
+    selectionIndicator: false,
+    infoBox: true,
+    shadows: false,
+    terrainShadows: ShadowMode.DISABLED,
+    requestRenderMode: true, // Only render when needed
+    maximumRenderTimeChange: 1000, // Limit render time
+    targetFrameRate: 30 // Target 30 FPS
+  });
+  
+  // Make viewer globally available for other functions
+  window.viewer = viewer;
+  
+  console.log("Viewer initialized");
 
-console.log("Viewer initialized");
+  // Disable shadow effects for all primitives in the scene
+  viewer.scene.globe.shadows = ShadowMode.DISABLED;
+  viewer.scene.shadowMap.enabled = false;
 
-// Disable shadow effects for all primitives in the scene
-viewer.scene.globe.shadows = ShadowMode.DISABLED;
-viewer.scene.shadowMap.enabled = false;
-
-// Disable default click behavior for 3D Tiles
-viewer.screenSpaceEventHandler.removeInputAction(ScreenSpaceEventType.LEFT_CLICK);
-viewer.screenSpaceEventHandler.removeInputAction(ScreenSpaceEventType.LEFT_DOUBLE_CLICK);
+  // Disable default click behavior for 3D Tiles
+  viewer.screenSpaceEventHandler.removeInputAction(ScreenSpaceEventType.LEFT_CLICK);
+  viewer.screenSpaceEventHandler.removeInputAction(ScreenSpaceEventType.LEFT_DOUBLE_CLICK);
+} catch (error) {
+  console.error("Error initializing viewer:", error);
+  showErrorMessage(`Error initializing map: ${error.message}`);
+  throw error;
+}
 
 // Function to hide loading overlay
 function hideLoading() {
   if (loadingOverlay) {
     loadingOverlay.style.display = 'none';
+  }
+}
+
+// Function to display error messages to users
+function showErrorMessage(message) {
+  if (loadingOverlay) {
+    const h1Element = loadingOverlay.querySelector('h1');
+    if (h1Element) {
+      h1Element.textContent = 'Error Loading Map';
+    }
+    
+    const progressElement = document.getElementById('loadingProgress');
+    if (progressElement && progressElement.parentNode) {
+      // Replace progress bar with error message
+      const errorDiv = document.createElement('div');
+      errorDiv.style.color = 'red';
+      errorDiv.style.margin = '20px';
+      errorDiv.style.maxWidth = '600px';
+      errorDiv.style.textAlign = 'center';
+      errorDiv.innerHTML = `<p>${message}</p><p>Try refreshing the page. If the problem persists, please contact support.</p>`;
+      
+      progressElement.parentNode.replaceChild(errorDiv, progressElement);
+    }
   }
 }
 
@@ -124,6 +182,7 @@ function buildCustomDescription(properties) {
 // Add custom building data
 async function addBuildingData() {
   try {
+    console.log('Starting to load building data');
     // Check if we have cached data in localStorage
     const cachedData = localStorage.getItem('buildingData');
     let parsedData;
@@ -132,17 +191,29 @@ async function addBuildingData() {
       console.log('Using cached building data');
       parsedData = JSON.parse(cachedData);
     } else {
+      console.log('Fetching CSV data from:', './data/mapData.csv');
       // Fetch and parse CSV data
-      const response = await fetch('/data/mapData.csv');
+      const response = await fetch('./data/mapData.csv');
+      
+      console.log('Fetch response status:', response.status);
+      
       if (!response.ok) {
         throw new Error(`HTTP error! status: ${response.status}`);
       }
       
       const csvText = await response.text();
-      console.log('CSV loaded successfully');
+      console.log('CSV loaded successfully, length:', csvText.length);
+      
+      if (!csvText || csvText.trim().length === 0) {
+        throw new Error('CSV file is empty');
+      }
       
       parsedData = Papa.parse(csvText, { header: true }).data;
       console.log('Parsed CSV data:', parsedData.length, 'rows');
+      
+      if (!parsedData || parsedData.length === 0) {
+        throw new Error('No data parsed from CSV');
+      }
       
       // Cache the parsed data for future use
       localStorage.setItem('buildingData', JSON.stringify(parsedData));
@@ -150,6 +221,7 @@ async function addBuildingData() {
     
     // Convert to GeoJSON
     const geojsonData = csvToGeoJson(parsedData);
+    console.log('Converted to GeoJSON, features:', geojsonData.features.length);
     
     // Create data source with chunking for large datasets
     const buildingSource = await GeoJsonDataSource.load(geojsonData, {
@@ -159,6 +231,8 @@ async function addBuildingData() {
       strokeWidth: 3,
       markerSymbol: '?'
     });
+    
+    console.log('GeoJSON data source created');
     
     // Customize entities
     buildingSource.entities.values.forEach(entity => {
@@ -195,6 +269,7 @@ async function addBuildingData() {
     return buildingSource;
   } catch (error) {
     console.error('Error loading building data:', error);
+    showErrorMessage(`Error loading building data: ${error.message}`);
     return null;
   }
 }
@@ -362,6 +437,10 @@ function setupLocationTracking() {
 // Initialize application
 async function initialize() {
   try {
+    console.log('Starting initialization');
+    // Log Cesium version and token status
+    console.log('Cesium token set:', !!Ion.defaultAccessToken);
+    
     // Update loading message
     updateLoadingMessage("Loading basic map...", 10);
     
@@ -382,47 +461,72 @@ async function initialize() {
     
     updateLoadingMessage("Loading 3D buildings...", 30);
     
-    // Load photorealistic tileset with lower initial detail
-    const photorealisticTileset = await createGooglePhotorealistic3DTileset({
-      maximumScreenSpaceError: 16 // Start with lower detail
-    });
-    
-    viewer.scene.primitives.add(photorealisticTileset);
-    photorealisticTileset.shadows = ShadowMode.DISABLED;
+    try {
+      // Load photorealistic tileset with lower initial detail
+      const photorealisticTileset = await createGooglePhotorealistic3DTileset({
+        maximumScreenSpaceError: 16 // Start with lower detail
+      });
+      
+      viewer.scene.primitives.add(photorealisticTileset);
+      photorealisticTileset.shadows = ShadowMode.DISABLED;
+      console.log('Photorealistic tileset loaded');
+    } catch (tilesetError) {
+      console.error('Error loading photorealistic tileset:', tilesetError);
+      // Continue even if tileset fails to load
+    }
     
     updateLoadingMessage("Loading Grossmont College Map...", 50);
     
-    // Load OSM buildings with lower initial detail
-    const osmBuildingsTileset = await createOsmBuildingsAsync({
-      maximumScreenSpaceError: 16 // Start with lower detail
-    });
-    
-    viewer.scene.primitives.add(osmBuildingsTileset);
-    osmBuildingsTileset.shadows = ShadowMode.DISABLED;
-    
-    // Make OSM buildings non-selectable and modify style
-    osmBuildingsTileset.style = new Cesium.Cesium3DTileStyle({
-      color: 'color("white", 0.7)',
-      show: true
-    });
-    
-    // Disable feature selection for OSM buildings
-    osmBuildingsTileset.showOutline = false;
-    osmBuildingsTileset.showBoundingVolume = false;
-    osmBuildingsTileset.showContentBoundingVolume = false;
-    osmBuildingsTileset.showRenderingStatistics = false;
-    osmBuildingsTileset.debugShowRenderingStatistics = false;
-    osmBuildingsTileset.debugShowBoundingVolume = false;
-    osmBuildingsTileset.debugShowContentBoundingVolume = false;
-    osmBuildingsTileset.debugShowRenderingTiles = false;
-    osmBuildingsTileset.debugShowGeometryBoundingVolume = false;
-    
-    console.log("Tilesets loaded successfully");
+    try {
+      // Load OSM buildings with lower initial detail
+      const osmBuildingsTileset = await createOsmBuildingsAsync({
+        maximumScreenSpaceError: 16 // Start with lower detail
+      });
+      
+      viewer.scene.primitives.add(osmBuildingsTileset);
+      osmBuildingsTileset.shadows = ShadowMode.DISABLED;
+      
+      // Make OSM buildings non-selectable and modify style
+      osmBuildingsTileset.style = new Cesium.Cesium3DTileStyle({
+        color: 'color("white", 0.7)',
+        show: true
+      });
+      
+      // Disable feature selection for OSM buildings
+      osmBuildingsTileset.showOutline = false;
+      osmBuildingsTileset.showBoundingVolume = false;
+      osmBuildingsTileset.showContentBoundingVolume = false;
+      osmBuildingsTileset.showRenderingStatistics = false;
+      osmBuildingsTileset.debugShowRenderingStatistics = false;
+      osmBuildingsTileset.debugShowBoundingVolume = false;
+      osmBuildingsTileset.debugShowContentBoundingVolume = false;
+      osmBuildingsTileset.debugShowRenderingTiles = false;
+      osmBuildingsTileset.debugShowGeometryBoundingVolume = false;
+      
+      console.log("OSM Buildings tileset loaded successfully");
+    } catch (osmError) {
+      console.error('Error loading OSM buildings:', osmError);
+      // Continue even if OSM buildings fail to load
+    }
     
     // Gradually increase detail level
     setTimeout(() => {
-      photorealisticTileset.maximumScreenSpaceError = 8;
-      osmBuildingsTileset.maximumScreenSpaceError = 8;
+      try {
+        const photorealisticTileset = viewer.scene.primitives.get(0);
+        const osmBuildingsTileset = viewer.scene.primitives.get(1);
+        
+        if (photorealisticTileset) {
+          photorealisticTileset.maximumScreenSpaceError = 8;
+        }
+        
+        if (osmBuildingsTileset) {
+          osmBuildingsTileset.maximumScreenSpaceError = 8;
+        }
+        
+        console.log("Detail level increased to medium");
+      } catch (error) {
+        console.error("Error updating detail level:", error);
+      }
     }, 2000);
     
     // Add building data
@@ -442,8 +546,22 @@ async function initialize() {
     
     // Final detail level increase
     setTimeout(() => {
-      photorealisticTileset.maximumScreenSpaceError = 4;
-      osmBuildingsTileset.maximumScreenSpaceError = 4;
+      try {
+        const photorealisticTileset = viewer.scene.primitives.get(0);
+        const osmBuildingsTileset = viewer.scene.primitives.get(1);
+        
+        if (photorealisticTileset) {
+          photorealisticTileset.maximumScreenSpaceError = 4;
+        }
+        
+        if (osmBuildingsTileset) {
+          osmBuildingsTileset.maximumScreenSpaceError = 4;
+        }
+        
+        console.log("Detail level increased to high");
+      } catch (error) {
+        console.error("Error updating final detail level:", error);
+      }
     }, 4000);
     
     updateLoadingMessage("Ready!", 100);
@@ -460,7 +578,14 @@ async function initialize() {
 
   } catch (error) {
     console.error("Initialization error:", error);
-    hideLoading();
+    console.error("Error details:", {
+      name: error.name,
+      message: error.message,
+      stack: error.stack
+    });
+    showErrorMessage(`Initialization error: ${error.message}`);
+    // Force hide loading overlay after timeout
+    setTimeout(hideLoading, 5000);
   }
 }
 
