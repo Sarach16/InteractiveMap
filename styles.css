@@ -15,6 +15,13 @@
     align-items: center;
     backdrop-filter: blur(5px);
     border: 2px solid #085e08;
+    touch-action: none;
+    -webkit-touch-callout: none;
+    -webkit-user-select: none;
+    -khtml-user-select: none;
+    -moz-user-select: none;
+    -ms-user-select: none;
+    user-select: none;
 }
 
 #location-search {
@@ -27,6 +34,10 @@
     outline: none;
     background: transparent;
     color: #333;
+    touch-action: manipulation;
+    -webkit-appearance: none;
+    -moz-appearance: none;
+    appearance: none;
 }
 
 #location-search::placeholder {
@@ -73,4 +84,44 @@
         font-size: 16px;
         margin-right: 10px;
     }
+}
+
+/* Prevent zoom on UI elements */
+html, body {
+    touch-action: manipulation;
+    -ms-content-zooming: none;
+    -ms-touch-action: manipulation;
+    overflow: hidden;
+    position: fixed;
+    width: 100%;
+    height: 100%;
+}
+
+#toolbar {
+    touch-action: none;
+    -webkit-touch-callout: none;
+    -webkit-user-select: none;
+    -khtml-user-select: none;
+    -moz-user-select: none;
+    -ms-user-select: none;
+    user-select: none;
+}
+
+#cesiumContainer {
+    touch-action: manipulation;
+    position: absolute;
+    top: 0;
+    left: 0;
+    right: 0;
+    bottom: 0;
+    overflow: hidden;
+}
+
+/* Add meta viewport tag to prevent default zooming */
+@viewport {
+    width: device-width;
+    zoom: 1.0;
+    min-zoom: 1.0;
+    max-zoom: 1.0;
+    user-zoom: fixed;
 } 
