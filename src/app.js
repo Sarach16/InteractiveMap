@@ -435,6 +435,96 @@ function setupLocationTracking() {
   }
 }
 
+// Convert parking lot CSV data to GeoJSON
+function parkingLotCsvToGeoJson(csvData) {
+  const geojsonData = {
+    type: 'FeatureCollection',
+    features: []
+  };
+  
+  csvData.forEach(lot => {
+    if (lot.Coordinates) {
+      // Get the center coordinate for the label
+      const coordinates = lot.Coordinates.split(';').map(coord => {
+        const [lat, lon] = coord.split(',').map(Number);
+        return [lat, lon];
+      });
+      
+      // Calculate center point for the label
+      const centerLat = coordinates.reduce((sum, coord) => sum + coord[0], 0) / coordinates.length;
+      const centerLon = coordinates.reduce((sum, coord) => sum + coord[1], 0) / coordinates.length;
+      
+      geojsonData.features.push({
+        type: 'Feature',
+        geometry: {
+          type: 'Point',
+          coordinates: [centerLon, centerLat]
+        },
+        properties: {
+          id: lot['Lot Number'] || '',
+          name: lot.Name || '',
+          type: lot.Type || ''
+        }
+      });
+    }
+  });
+  
+  return geojsonData;
+}
+
+// Add parking lot data
+async function addParkingLotData() {
+  try {
+    console.log('Starting to load parking lot data');
+    
+    // Fetch and parse CSV data
+    const response = await fetch('./data/parkingLots.csv');
+    
+    if (!response.ok) {
+      throw new Error(`HTTP error! status: ${response.status}`);
+    }
+    
+    const csvText = await response.text();
+    const parsedData = Papa.parse(csvText, { header: true }).data;
+    
+    // Convert to GeoJSON
+    const geojsonData = parkingLotCsvToGeoJson(parsedData);
+    
+    // Create data source
+    const parkingSource = await GeoJsonDataSource.load(geojsonData);
+    
+    // Customize entities
+    parkingSource.entities.values.forEach(entity => {
+      // Set up the label
+      entity.label = {
+        text: 'Lot' + entity.properties.id.getValue(), // 'P' prefix for Parking
+        font: '24px sans-serif',
+        style: Cesium.LabelStyle.FILL_AND_OUTLINE,
+        fillColor: Color.WHITE,
+        outlineColor: Color.BLACK,
+        outlineWidth: 2,
+        verticalOrigin: Cesium.VerticalOrigin.CENTER,
+        horizontalOrigin: Cesium.HorizontalOrigin.CENTER,
+        heightReference: Cesium.HeightReference.CLAMP_TO_GROUND,
+        disableDepthTestDistance: Number.POSITIVE_INFINITY,
+        scale: 1.0
+      };
+      
+      // Remove any other entity visualization
+      entity.point = undefined;
+      entity.billboard = undefined;
+    });
+    
+    // Add to viewer
+    viewer.dataSources.add(parkingSource);
+    
+    return parkingSource;
+  } catch (error) {
+    console.error('Error loading parking lot data:', error);
+    return null;
+  }
+}
+
 // Initialize application
 async function initialize() {
   try {
@@ -539,6 +629,9 @@ async function initialize() {
     // Add building data
     updateLoadingMessage("Loading building information...", 70);
     await addBuildingData();
+    
+    updateLoadingMessage("Loading parking lots...", 80);
+    await addParkingLotData();
     
     updateLoadingMessage("Setting up controls...", 90);
     

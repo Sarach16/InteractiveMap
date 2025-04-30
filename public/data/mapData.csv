@@ -1,5 +1,5 @@
 Building Number,Name,Description,Latitude,Longitude
-10,Administration,"Admissions & Records, Financial Aid, Counseling, Transfer Center, and other student services.",32.81531709,-117.0060159
+10,Administration,"Admissions & Records, Financial Aid, Counseling, Transfer Center, Deans, and other student services.",32.81531709,-117.0060159
 20,Digital Media & Photography,"Photography, Digital Art, and Media Communications classes with professional studios and darkrooms.",32.81488237,-117.0069176
 21,Theater Arts,"Stagehouse Theatre with classes in acting, musical theatre, makeup, and costume design.",32.81504,-117.00757
 22,Performing and Visual Arts Center/Hyde Art Gallery,Theather and Art Gallery ,32.81460396,-117.0075237
@@ -25,3 +25,13 @@ Building Number,Name,Description,Latitude,Longitude
 60,Griffin Center/Culinary Arts & Student Affairs,"Cafeteria and Java Market/ Baking, nutrition, culinary entrepreneurship. Upstairs: ASGC Board Room, Student Affairs, food pantry (Gizmo’s Kitchen), Peet’s Coffee, Career Center, Health Services.",32.81563542,-117.0050679
 62,College Bookstore,Bookstore,32.81541671,-117.0057
 70,Library & Learning Center,"Library, tech mall, English writing center, computer labs, and The Village student support programs.",32.8162497,-117.0062974
+80,District Annex,"Chancellor, Vice Chancellor, and other district offices.",32.81998651447728,-117.00758271557308
+91,Athletic Maintenance,"",32.81759440286119,-117.00547715438408
+92,Football Field and track House,"",32.818730981117625,-117.00442136298298
+93,Softball Field House,"",32.8196059922044,-117.00511969225805
+94,Baseball Field House,"",32.81932717107021,-117.00413052307026
+95,Observatory,"",32.819513041274625,-117.00303817401151
+100,Portable Classrooms,"",32.81566528187124, -117.00374305382724
+
+
+
