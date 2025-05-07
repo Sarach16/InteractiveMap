@@ -463,7 +463,8 @@ function parkingLotCsvToGeoJson(csvData) {
         properties: {
           id: lot['Lot Number'] || '',
           name: lot.Name || '',
-          type: lot.Type || ''
+          type: lot.Type || '',
+          nearbyBuildings: lot.NearbyBuildings || ''
         }
       });
     }
@@ -495,34 +496,88 @@ async function addParkingLotData() {
     
     // Customize entities
     parkingSource.entities.values.forEach(entity => {
-      // Set up the label
-      entity.label = {
-        text: 'Lot' + entity.properties.id.getValue(), // 'P' prefix for Parking
-        font: '24px sans-serif',
-        style: Cesium.LabelStyle.FILL_AND_OUTLINE,
-        fillColor: Color.WHITE,
-        outlineColor: Color.BLACK,
-        outlineWidth: 2,
-        verticalOrigin: Cesium.VerticalOrigin.CENTER,
-        horizontalOrigin: Cesium.HorizontalOrigin.CENTER,
-        heightReference: Cesium.HeightReference.CLAMP_TO_GROUND,
-        disableDepthTestDistance: Number.POSITIVE_INFINITY,
-        scale: 1.0
-      };
+      const properties = entity.properties;
+      const lotNumber = properties.id.getValue();
+      const lotName = properties.name.getValue();
+      const lotTypes = properties.type.getValue().split(';');
       
-      // Remove any other entity visualization
-      entity.point = undefined;
-      entity.billboard = undefined;
+      // Create custom description HTML with styled parking types
+      const description = `
+        <div style="font-family: Arial, sans-serif; padding: 10px; max-width: 300px;">
+          <h2 style="color: #00685e; margin-top: 0;">${lotName}</h2>
+          <div style="margin: 10px 0;">
+            <strong>Available Parking:</strong>
+            <div style="display: flex; flex-wrap: wrap; gap: 5px; margin-top: 5px;">
+              ${lotTypes.map(type => `
+                <span style="
+                  background-color: ${getParkingTypeColor(type)};
+                  color: white;
+                  padding: 3px 8px;
+                  border-radius: 12px;
+                  font-size: 12px;
+                ">${type}</span>
+              `).join('')}
+            </div>
+          </div>
+        </div>
+      `;
+      
+      // Set up the entity
+      entity.description = description;
+      
+      // Add a billboard (icon) for the parking lot
+      entity.billboard = {
+        image: './assets/parking-icon.png', // You'll need to add this icon
+        verticalOrigin: Cesium.VerticalOrigin.BOTTOM,
+        scale: 0.09,
+        heightReference: Cesium.HeightReference.CLAMP_TO_GROUND,
+        disableDepthTestDistance: Number.POSITIVE_INFINITY
+      };
     });
     
     // Add to viewer
     viewer.dataSources.add(parkingSource);
     window.grossmontLayers.parking = parkingSource;
     
+    // Set up click handler for parking lots
+    const handler = new ScreenSpaceEventHandler(viewer.scene.canvas);
+    handler.setInputAction(function(click) {
+      const pickedFeature = viewer.scene.pick(click.position);
+      
+      if (pickedFeature && pickedFeature.id) {
+        // Check if it's a parking lot entity
+        if (pickedFeature.id.properties && pickedFeature.id.properties.id) {
+          viewer.selectedEntity = pickedFeature.id;
+          
+          // Fly to the parking lot
+          viewer.flyTo(pickedFeature.id, {
+            duration: 1,
+            offset: new HeadingPitchRange(0, -CesiumMath.toRadians(45), 200)
+          });
+        }
+      }
+    }, ScreenSpaceEventType.LEFT_CLICK);
+    
     return parkingSource;
   } catch (error) {
     console.error('Error loading parking lot data:', error);
     return null;
+  }
+}
+
+// Helper function to get color based on parking type
+function getParkingTypeColor(type) {
+  switch (type.trim()) {
+    case 'Student':
+      return '#4CAF50'; // Green
+    case 'Staff':
+      return '#2196F3'; // Blue
+    case 'Disabled':
+      return '#FF9800'; // Orange
+    case 'Bus Loading':
+      return '#9C27B0'; // Purple
+    default:
+      return '#757575'; // Gray
   }
 }
 
@@ -532,6 +587,206 @@ window.grossmontLayers = {
   transportation: null, // Placeholder for future
   services: null // Placeholder for future
 };
+
+// Set up a search function for buildings
+function setupBuildingSearch() {
+  const searchInput = document.getElementById('sidebar-location-search');
+  const searchResults = document.getElementById('search-results');
+  let currentResults = [];
+  let selectedIndex = -1;
+
+  // Fuzzy search function
+  function fuzzySearch(text, search) {
+    if (!text || !search) return 0;
+    const searchLower = search.toLowerCase();
+    const textLower = text.toLowerCase();
+    
+    // Exact match
+    if (textLower.includes(searchLower)) return 1;
+    
+    // Fuzzy match (check if all characters are in order)
+    let j = 0;
+    for (let i = 0; i < textLower.length && j < searchLower.length; i++) {
+      if (textLower[i] === searchLower[j]) j++;
+    }
+    return j === searchLower.length ? 0.5 : 0;
+  }
+
+  function performSearch() {
+    const searchText = searchInput.value.toLowerCase();
+    if (!searchText) {
+      searchResults.style.display = 'none';
+      return;
+    }
+
+    // Search all entities
+    currentResults = [];
+    const dataSource = viewer.dataSources.get(0);
+    
+    if (!dataSource) {
+      console.error('No data source found');
+      return;
+    }
+
+    dataSource.entities.values.forEach(entity => {
+      const name = entity.properties.name?.getValue() || '';
+      const buildingNumber = entity.properties.buildingNumber?.getValue() || '';
+      const description = entity.properties.description?.getValue() || '';
+      
+      const nameScore = fuzzySearch(name, searchText);
+      const numberScore = fuzzySearch(buildingNumber, searchText);
+      const descScore = fuzzySearch(description, searchText);
+      
+      const maxScore = Math.max(nameScore, numberScore, descScore);
+      
+      if (maxScore > 0) {
+        currentResults.push({
+          entity,
+          score: maxScore,
+          name,
+          buildingNumber,
+          description
+        });
+      }
+    });
+
+    // Sort results by score
+    currentResults.sort((a, b) => b.score - a.score);
+
+    // Display results
+    if (currentResults.length > 0) {
+      searchResults.innerHTML = currentResults
+        .map((result, index) => `
+          <div class="search-result" data-index="${index}">
+            <strong>${result.name} (Building ${result.buildingNumber})</strong>
+            <span>${result.description}</span>
+          </div>
+        `)
+        .join('');
+      searchResults.style.display = 'block';
+      selectedIndex = -1;
+    } else {
+      searchResults.innerHTML = '<div class="no-results">No buildings found</div>';
+      searchResults.style.display = 'block';
+    }
+  }
+
+  function selectResult(index) {
+    if (index < 0 || index >= currentResults.length) return;
+    
+    const result = currentResults[index];
+    selectedIndex = index;
+
+    // Update visual selection
+    const results = searchResults.getElementsByClassName('search-result');
+    Array.from(results).forEach((el, i) => {
+      el.style.backgroundColor = i === index ? '#e3f2fd' : '';
+    });
+
+    // Fly to the building
+    viewer.flyTo(result.entity, {
+      duration: 2,
+      offset: new HeadingPitchRange(0, -CesiumMath.toRadians(65), 400),
+      //heightReference: Cesium.HeightReference.RELATIVE_TO_GROUND,
+      //offsetHeight: 50
+    });
+
+    // Select the entity to show its info
+    viewer.selectedEntity = result.entity;
+    
+    // Clear the search input and hide the dropdown
+    searchInput.value = '';
+    searchResults.style.display = 'none';
+  }
+
+  // Event Listeners
+  if (searchInput && searchResults) {
+    // Search on input with debounce
+    let debounceTimeout;
+    searchInput.addEventListener('input', () => {
+      clearTimeout(debounceTimeout);
+      debounceTimeout = setTimeout(performSearch, 300);
+    });
+
+    // Enter key support
+    searchInput.addEventListener('keyup', (event) => {
+      if (event.key === 'Enter') {
+        if (selectedIndex === -1 && currentResults.length > 0) {
+          selectResult(0);
+        }
+      } else if (event.key === 'ArrowDown') {
+        event.preventDefault();
+        selectResult(Math.min(selectedIndex + 1, currentResults.length - 1));
+      } else if (event.key === 'ArrowUp') {
+        event.preventDefault();
+        selectResult(Math.max(selectedIndex - 1, 0));
+      } else if (event.key === 'Escape') {
+        searchResults.style.display = 'none';
+        selectedIndex = -1;
+      }
+    });
+
+    // Click on search results
+    searchResults.addEventListener('click', (event) => {
+      const result = event.target.closest('.search-result');
+      if (result) {
+        const index = parseInt(result.dataset.index);
+        selectResult(index);
+      }
+    });
+
+    // Close search results when clicking outside
+    document.addEventListener('click', (event) => {
+      if (!searchInput.contains(event.target) && !searchResults.contains(event.target)) {
+        searchResults.style.display = 'none';
+      }
+    });
+  } else {
+    console.error('Search elements not found:', {
+      searchInput: !!searchInput,
+      searchResults: !!searchResults
+    });
+  }
+}
+
+// Set up home button functionality
+function setupHomeButton() {
+  const homeButton = document.getElementById('home-btn');
+  if (homeButton) {
+    homeButton.addEventListener('click', returnToInitialView);
+  }
+}
+
+// Add sidebar layer toggling logic
+function setupSidebarLayerToggles() {
+  const parkingCheckbox = document.getElementById('parking-checkbox');
+  const transportationCheckbox = document.getElementById('transportation-checkbox');
+  const servicesCheckbox = document.getElementById('services-checkbox');
+
+  if (parkingCheckbox) {
+    parkingCheckbox.addEventListener('change', () => {
+      if (window.grossmontLayers.parking) {
+        window.grossmontLayers.parking.show = parkingCheckbox.checked;
+      }
+    });
+  }
+  if (transportationCheckbox) {
+    transportationCheckbox.addEventListener('change', () => {
+      // TODO: Implement when transportation layer is added
+      if (window.grossmontLayers.transportation) {
+        window.grossmontLayers.transportation.show = transportationCheckbox.checked;
+      }
+    });
+  }
+  if (servicesCheckbox) {
+    servicesCheckbox.addEventListener('change', () => {
+      // TODO: Implement when services layer is added
+      if (window.grossmontLayers.services) {
+        window.grossmontLayers.services.show = servicesCheckbox.checked;
+      }
+    });
+  }
+}
 
 // Initialize application
 async function initialize() {
@@ -686,7 +941,6 @@ async function initialize() {
 
     // Add sidebar layer toggling logic
     setupSidebarLayerToggles();
-    setupSidebarSearchIntegration();
 
   } catch (error) {
     console.error("Initialization error:", error);
@@ -698,217 +952,6 @@ async function initialize() {
     showErrorMessage(`Initialization error: ${error.message}`);
     // Force hide loading overlay after timeout
     setTimeout(hideLoading, 5000);
-  }
-}
-
-// Set up a search function for buildings
-function setupBuildingSearch() {
-  const searchInput = document.getElementById('location-search');
-  const searchResults = document.getElementById('search-results');
-  let currentResults = [];
-  let selectedIndex = -1;
-
-  // Fuzzy search function
-  function fuzzySearch(text, search) {
-    if (!text || !search) return 0;
-    const searchLower = search.toLowerCase();
-    const textLower = text.toLowerCase();
-    
-    // Exact match
-    if (textLower.includes(searchLower)) return 1;
-    
-    // Fuzzy match (check if all characters are in order)
-    let j = 0;
-    for (let i = 0; i < textLower.length && j < searchLower.length; i++) {
-      if (textLower[i] === searchLower[j]) j++;
-    }
-    return j === searchLower.length ? 0.5 : 0;
-  }
-
-  function performSearch() {
-    const searchText = searchInput.value.toLowerCase();
-    if (!searchText) {
-      searchResults.style.display = 'none';
-      return;
-    }
-
-    // Search all entities
-    currentResults = [];
-    const dataSource = viewer.dataSources.get(0);
-    
-    if (!dataSource) {
-      console.error('No data source found');
-      return;
-    }
-
-    dataSource.entities.values.forEach(entity => {
-      const name = entity.properties.name?.getValue() || '';
-      const buildingNumber = entity.properties.buildingNumber?.getValue() || '';
-      const description = entity.properties.description?.getValue() || '';
-      
-      const nameScore = fuzzySearch(name, searchText);
-      const numberScore = fuzzySearch(buildingNumber, searchText);
-      const descScore = fuzzySearch(description, searchText);
-      
-      const maxScore = Math.max(nameScore, numberScore, descScore);
-      
-      if (maxScore > 0) {
-        currentResults.push({
-          entity,
-          score: maxScore,
-          name,
-          buildingNumber,
-          description
-        });
-      }
-    });
-
-    // Sort results by score
-    currentResults.sort((a, b) => b.score - a.score);
-
-    // Display results
-    if (currentResults.length > 0) {
-      searchResults.innerHTML = currentResults
-        .map((result, index) => `
-          <div class="search-result" data-index="${index}">
-            <strong>${result.name} (Building ${result.buildingNumber})</strong>
-            <span>${result.description}</span>
-          </div>
-        `)
-        .join('');
-      searchResults.style.display = 'block';
-      selectedIndex = -1;
-    } else {
-      searchResults.innerHTML = '<div class="no-results">No buildings found</div>';
-      searchResults.style.display = 'block';
-    }
-  }
-
-  function selectResult(index) {
-    if (index < 0 || index >= currentResults.length) return;
-    
-    const result = currentResults[index];
-    selectedIndex = index;
-
-    // Update visual selection
-    const results = searchResults.getElementsByClassName('search-result');
-    Array.from(results).forEach((el, i) => {
-      el.style.backgroundColor = i === index ? '#e3f2fd' : '';
-    });
-
-    // Fly to the building
-    viewer.flyTo(result.entity, {
-      duration: 2,
-      offset: new HeadingPitchRange(0, -CesiumMath.toRadians(45), 200)
-    });
-
-    // Select the entity to show its info
-    viewer.selectedEntity = result.entity;
-    
-    // Clear the search input and hide the dropdown
-    searchInput.value = '';
-    searchResults.style.display = 'none';
-  }
-
-  // Event Listeners
-  if (searchInput && searchResults) {
-    // Search on input with debounce
-    let debounceTimeout;
-    searchInput.addEventListener('input', () => {
-      clearTimeout(debounceTimeout);
-      debounceTimeout = setTimeout(performSearch, 300);
-    });
-
-    // Enter key support
-    searchInput.addEventListener('keyup', (event) => {
-      if (event.key === 'Enter') {
-        if (selectedIndex === -1 && currentResults.length > 0) {
-          selectResult(0);
-        }
-      } else if (event.key === 'ArrowDown') {
-        event.preventDefault();
-        selectResult(Math.min(selectedIndex + 1, currentResults.length - 1));
-      } else if (event.key === 'ArrowUp') {
-        event.preventDefault();
-        selectResult(Math.max(selectedIndex - 1, 0));
-      } else if (event.key === 'Escape') {
-        searchResults.style.display = 'none';
-        selectedIndex = -1;
-      }
-    });
-
-    // Click on search results
-    searchResults.addEventListener('click', (event) => {
-      const result = event.target.closest('.search-result');
-      if (result) {
-        const index = parseInt(result.dataset.index);
-        selectResult(index);
-      }
-    });
-
-    // Close search results when clicking outside
-    document.addEventListener('click', (event) => {
-      if (!searchInput.contains(event.target) && !searchResults.contains(event.target)) {
-        searchResults.style.display = 'none';
-      }
-    });
-  } else {
-    console.error('Search elements not found:', {
-      searchInput: !!searchInput,
-      searchResults: !!searchResults
-    });
-  }
-}
-
-// Set up home button functionality
-function setupHomeButton() {
-  const homeButton = document.getElementById('home-btn');
-  if (homeButton) {
-    homeButton.addEventListener('click', returnToInitialView);
-  }
-}
-
-// Add sidebar layer toggling logic
-function setupSidebarLayerToggles() {
-  const parkingCheckbox = document.getElementById('parking-checkbox');
-  const transportationCheckbox = document.getElementById('transportation-checkbox');
-  const servicesCheckbox = document.getElementById('services-checkbox');
-
-  if (parkingCheckbox) {
-    parkingCheckbox.addEventListener('change', () => {
-      if (window.grossmontLayers.parking) {
-        window.grossmontLayers.parking.show = parkingCheckbox.checked;
-      }
-    });
-  }
-  if (transportationCheckbox) {
-    transportationCheckbox.addEventListener('change', () => {
-      // TODO: Implement when transportation layer is added
-      if (window.grossmontLayers.transportation) {
-        window.grossmontLayers.transportation.show = transportationCheckbox.checked;
-      }
-    });
-  }
-  if (servicesCheckbox) {
-    servicesCheckbox.addEventListener('change', () => {
-      // TODO: Implement when services layer is added
-      if (window.grossmontLayers.services) {
-        window.grossmontLayers.services.show = servicesCheckbox.checked;
-      }
-    });
-  }
-}
-
-// Integrate sidebar search bar with building search
-function setupSidebarSearchIntegration() {
-  const sidebarSearch = document.getElementById('sidebar-location-search');
-  const mainSearch = document.getElementById('location-search');
-  if (sidebarSearch && mainSearch) {
-    sidebarSearch.addEventListener('input', () => {
-      mainSearch.value = sidebarSearch.value;
-      const event = new Event('input', { bubbles: true });
-      mainSearch.dispatchEvent(event);
-    });
   }
 }
 
