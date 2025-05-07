@@ -124,4 +124,143 @@ html, body {
     min-zoom: 1.0;
     max-zoom: 1.0;
     user-zoom: fixed;
+}
+
+/* Sidebar styles for Grossmont College map */
+#sidebar {
+    position: absolute;
+    top: 0;
+    left: 0;
+    width: 320px;
+    height: 100vh;
+    background: #fff;
+    box-shadow: 2px 0 12px rgba(0,0,0,0.08);
+    z-index: 1200;
+    display: flex;
+    flex-direction: column;
+    padding: 0 0 20px 0;
+    border-right: 4px solid #085e08; /* Grossmont green */
+    transition: transform 0.3s ease-in-out;
+}
+
+.sidebar-header {
+    display: flex;
+    flex-direction: column;
+    align-items: center;
+    padding: 28px 0 16px 0;
+    background: #085e08;
+    color: #fff;
+}
+
+.sidebar-logo {
+    width: 80px;
+    height: 80px;
+    border-radius: 16px;
+    margin-bottom: 10px;
+    border: 3px solid #ffd700; /* Grossmont gold */
+    background: #fff;
+}
+
+.sidebar-header h2 {
+    font-size: 1.4rem;
+    font-weight: 700;
+    margin: 0;
+    letter-spacing: 1px;
+}
+
+.sidebar-search {
+    display: flex;
+    align-items: center;
+    padding: 18px 20px 10px 20px;
+    background: #fff;
+}
+
+#sidebar-location-search {
+    flex: 1;
+    padding: 10px 14px;
+    border: 2px solid #085e08;
+    border-radius: 20px;
+    font-size: 16px;
+    outline: none;
+    background: #f8f8f8;
+    color: #333;
+}
+
+.sidebar-search-icon {
+    color: #085e08;
+    margin-left: -32px;
+    font-size: 18px;
+    pointer-events: none;
+}
+
+.sidebar-categories {
+    display: flex;
+    flex-direction: column;
+    gap: 16px;
+    padding: 18px 24px 0 24px;
+}
+
+.sidebar-categories label {
+    font-size: 1.08rem;
+    color: #222;
+    display: flex;
+    align-items: center;
+    gap: 10px;
+    cursor: pointer;
+    user-select: none;
+}
+
+.sidebar-categories input[type="checkbox"] {
+    accent-color: #085e08;
+    width: 18px;
+    height: 18px;
+}
+
+.sidebar-categories i {
+    color: #ffd700;
+    font-size: 1.2em;
+    min-width: 22px;
+    text-align: center;
+}
+
+/* Responsive sidebar: collapses/overlays on mobile */
+@media (max-width: 900px) {
+    #sidebar {
+        width: 80vw;
+        min-width: 220px;
+        max-width: 350px;
+        height: 100vh;
+        transform: translateX(-100%);
+        position: fixed;
+        box-shadow: 2px 0 16px rgba(0,0,0,0.18);
+    }
+    #sidebar.open {
+        transform: translateX(0);
+    }
+}
+
+@media (max-width: 600px) {
+    #sidebar {
+        width: 100vw;
+        min-width: 0;
+        max-width: none;
+        border-right: none;
+        border-bottom: 4px solid #085e08;
+        top: 0;
+        left: 0;
+        height: auto;
+        max-height: 60vh;
+        overflow-y: auto;
+        border-radius: 0 0 18px 18px;
+    }
+}
+
+/* Make sure map is not blocked by sidebar */
+#cesiumContainer {
+    left: 320px;
+}
+@media (max-width: 900px) {
+    #cesiumContainer {
+        left: 0;
+    }
 } 

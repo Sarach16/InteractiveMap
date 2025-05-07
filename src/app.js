@@ -517,6 +517,7 @@ async function addParkingLotData() {
     
     // Add to viewer
     viewer.dataSources.add(parkingSource);
+    window.grossmontLayers.parking = parkingSource;
     
     return parkingSource;
   } catch (error) {
@@ -524,6 +525,13 @@ async function addParkingLotData() {
     return null;
   }
 }
+
+// Global references for toggling layers
+window.grossmontLayers = {
+  parking: null,
+  transportation: null, // Placeholder for future
+  services: null // Placeholder for future
+};
 
 // Initialize application
 async function initialize() {
@@ -675,6 +683,10 @@ async function initialize() {
     viewer.scene.screenSpaceCameraController.enableZoom = true;
     viewer.scene.screenSpaceCameraController.minimumZoomDistance = 80;
     viewer.scene.screenSpaceCameraController.maximumZoomDistance = 2000;
+
+    // Add sidebar layer toggling logic
+    setupSidebarLayerToggles();
+    setupSidebarSearchIntegration();
 
   } catch (error) {
     console.error("Initialization error:", error);
@@ -856,5 +868,49 @@ function setupHomeButton() {
   }
 }
 
-// Initialize the application
+// Add sidebar layer toggling logic
+function setupSidebarLayerToggles() {
+  const parkingCheckbox = document.getElementById('parking-checkbox');
+  const transportationCheckbox = document.getElementById('transportation-checkbox');
+  const servicesCheckbox = document.getElementById('services-checkbox');
+
+  if (parkingCheckbox) {
+    parkingCheckbox.addEventListener('change', () => {
+      if (window.grossmontLayers.parking) {
+        window.grossmontLayers.parking.show = parkingCheckbox.checked;
+      }
+    });
+  }
+  if (transportationCheckbox) {
+    transportationCheckbox.addEventListener('change', () => {
+      // TODO: Implement when transportation layer is added
+      if (window.grossmontLayers.transportation) {
+        window.grossmontLayers.transportation.show = transportationCheckbox.checked;
+      }
+    });
+  }
+  if (servicesCheckbox) {
+    servicesCheckbox.addEventListener('change', () => {
+      // TODO: Implement when services layer is added
+      if (window.grossmontLayers.services) {
+        window.grossmontLayers.services.show = servicesCheckbox.checked;
+      }
+    });
+  }
+}
+
+// Integrate sidebar search bar with building search
+function setupSidebarSearchIntegration() {
+  const sidebarSearch = document.getElementById('sidebar-location-search');
+  const mainSearch = document.getElementById('location-search');
+  if (sidebarSearch && mainSearch) {
+    sidebarSearch.addEventListener('input', () => {
+      mainSearch.value = sidebarSearch.value;
+      const event = new Event('input', { bubbles: true });
+      mainSearch.dispatchEvent(event);
+    });
+  }
+}
+
+// Call initialize on load
 initialize();
