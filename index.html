@@ -39,8 +39,10 @@
 <body>
     <div id="sidebar">
         <div class="sidebar-header">
-            <img src="https://via.placeholder.com/80x80?text=Grossmont" alt="Grossmont College" class="sidebar-logo">
-            <h2>Grossmont College</h2>
+            <div class="sidebar-logo-bg">
+                <img src="./assets/Grossmontcollegelogo-vertical-color.png" alt="Grossmont College Logo" class="sidebar-logo-vertical">
+            </div>
+            <img src="./assets/Grossmont-College-2.jpg" alt="Grossmont College Campus" class="sidebar-campus-photo">
         </div>
         <div class="sidebar-search">
             <input type="text" id="sidebar-location-search" placeholder="Search locations...">
@@ -48,9 +50,9 @@
             <div id="search-results"></div>
         </div>
         <div class="sidebar-categories">
-            <label><input type="checkbox" id="parking-checkbox" checked> <i class="fas fa-car"></i> Parking Lots</label>
-            <label><input type="checkbox" id="transportation-checkbox" checked> <i class="fas fa-bus"></i> Transportation</label>
-            <label><input type="checkbox" id="services-checkbox" checked> <i class="fas fa-concierge-bell"></i> Services</label>
+            <label><input type="checkbox" id="parking-checkbox" checked> <i class="fa-solid fa-square-parking" style="color: #FFD700;"></i> Parking Lots</label>
+            <label><input type="checkbox" id="transportation-checkbox" checked> <i class="fa-solid fa-bus" style="color: #FFD700;"></i> Bus Stops</label>
+            <label><input type="checkbox" id="services-checkbox" checked> <i class="fa-solid fa-building-columns" style="color: #FFD700;"></i> Student Services</label>
         </div>
     </div>
     <div id="cesiumContainer" class="fullSize"></div>
