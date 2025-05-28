@@ -788,6 +788,123 @@ function setupSidebarLayerToggles() {
   }
 }
 
+// Convert bus stop CSV data to GeoJSON
+function busStopCsvToGeoJson(csvData) {
+  const geojsonData = {
+    type: 'FeatureCollection',
+    features: []
+  };
+  
+  csvData.forEach(stop => {
+    if (stop.latitude && stop.longitude) {
+      geojsonData.features.push({
+        type: 'Feature',
+        geometry: {
+          type: 'Point',
+          coordinates: [parseFloat(stop.longitude), parseFloat(stop.latitude)]
+        },
+        properties: {
+          name: stop.stop_name || '',
+          busLines: stop.bus_lines || ''
+        }
+      });
+    }
+  });
+  
+  return geojsonData;
+}
+
+// Add bus stop data
+async function addBusStopData() {
+  try {
+    console.log('Starting to load bus stop data');
+    
+    // Fetch and parse CSV data
+    const response = await fetch('./data/busStops.csv');
+    
+    if (!response.ok) {
+      throw new Error(`HTTP error! status: ${response.status}`);
+    }
+    
+    const csvText = await response.text();
+    const parsedData = Papa.parse(csvText, { header: true }).data;
+    
+    // Convert to GeoJSON
+    const geojsonData = busStopCsvToGeoJson(parsedData);
+    
+    // Create data source
+    const busStopSource = await GeoJsonDataSource.load(geojsonData);
+    
+    // Customize entities
+    busStopSource.entities.values.forEach(entity => {
+      const properties = entity.properties;
+      const stopName = properties.name.getValue();
+      const busLines = properties.busLines.getValue().split(', ');
+      
+      // Create custom description HTML
+      const description = `
+        <div style="font-family: Arial, sans-serif; padding: 10px; max-width: 300px;">
+          <h2 style="color: #00685e; margin-top: 0;">${stopName}</h2>
+          <div style="margin: 10px 0;">
+            <strong>Available Bus Lines:</strong>
+            <div style="display: flex; flex-direction: column; gap: 5px; margin-top: 5px;">
+              ${busLines.map(line => `
+                <span style="
+                  background-color: #00685e;
+                  color: white;
+                  padding: 5px 10px;
+                  border-radius: 4px;
+                  font-size: 14px;
+                ">${line}</span>
+              `).join('')}
+            </div>
+          </div>
+        </div>
+      `;
+      
+      // Set up the entity
+      entity.description = description;
+      
+      // Add a billboard (icon) for the bus stop
+      entity.billboard = {
+        image: './assets/bus-stop-icon.png',
+        verticalOrigin: Cesium.VerticalOrigin.BOTTOM,
+        scale: 0.09,
+        heightReference: Cesium.HeightReference.CLAMP_TO_GROUND,
+        disableDepthTestDistance: Number.POSITIVE_INFINITY
+      };
+    });
+    
+    // Add to viewer
+    viewer.dataSources.add(busStopSource);
+    window.grossmontLayers.transportation = busStopSource;
+    
+    // Set up click handler for bus stops
+    const handler = new ScreenSpaceEventHandler(viewer.scene.canvas);
+    handler.setInputAction(function(click) {
+      const pickedFeature = viewer.scene.pick(click.position);
+      
+      if (pickedFeature && pickedFeature.id) {
+        // Check if it's a bus stop entity
+        if (pickedFeature.id.properties && pickedFeature.id.properties.name) {
+          viewer.selectedEntity = pickedFeature.id;
+          
+          // Fly to the bus stop
+          viewer.flyTo(pickedFeature.id, {
+            duration: 1,
+            offset: new HeadingPitchRange(0, -CesiumMath.toRadians(45), 200)
+          });
+        }
+      }
+    }, ScreenSpaceEventType.LEFT_CLICK);
+    
+    return busStopSource;
+  } catch (error) {
+    console.error('Error loading bus stop data:', error);
+    return null;
+  }
+}
+
 // Initialize application
 async function initialize() {
   try {
@@ -895,6 +1012,9 @@ async function initialize() {
     
     updateLoadingMessage("Loading parking lots...", 80);
     await addParkingLotData();
+    
+    updateLoadingMessage("Loading bus stops...", 85);
+    await addBusStopData();
     
     updateLoadingMessage("Setting up controls...", 90);
     
