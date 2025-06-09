@@ -527,7 +527,7 @@ async function addParkingLotData() {
       
       // Add a billboard (icon) for the parking lot
       entity.billboard = {
-        image: './assets/parking-icon.png', // You'll need to add this icon
+        image: '/assets/parking-icon.png', // You'll need to add this icon
         verticalOrigin: Cesium.VerticalOrigin.BOTTOM,
         scale: 0.09,
         heightReference: Cesium.HeightReference.CLAMP_TO_GROUND,
@@ -889,7 +889,7 @@ async function addBusStopData() {
       
       // Add a billboard (icon) for the bus stop
       entity.billboard = {
-        image: './assets/bus-stop-icon.png',
+        image: '/assets/bus-stop-icon.png',
         verticalOrigin: Cesium.VerticalOrigin.BOTTOM,
         scale: 0.09,
         heightReference: Cesium.HeightReference.CLAMP_TO_GROUND,
@@ -993,7 +993,7 @@ async function addStudentServicesData() {
       
       // Add a billboard (icon) for the service
       entity.billboard = {
-        image: '../assets/service-icon.png',
+        image: '/assets/service-icon.png',
         verticalOrigin: Cesium.VerticalOrigin.BOTTOM,
         scale: 0.09,
         heightReference: Cesium.HeightReference.CLAMP_TO_GROUND,
