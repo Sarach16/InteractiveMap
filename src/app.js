@@ -588,7 +588,7 @@ window.grossmontLayers = {
   services: null // Placeholder for future
 };
 
-// Set up a search function for buildings
+// Set up a search function for buildings and services
 function setupBuildingSearch() {
   const searchInput = document.getElementById('sidebar-location-search');
   const searchResults = document.getElementById('search-results');
@@ -621,34 +621,57 @@ function setupBuildingSearch() {
 
     // Search all entities
     currentResults = [];
-    const dataSource = viewer.dataSources.get(0);
     
-    if (!dataSource) {
-      console.error('No data source found');
-      return;
+    // Search buildings
+    const buildingSource = viewer.dataSources.get(0);
+    if (buildingSource) {
+      buildingSource.entities.values.forEach(entity => {
+        const name = entity.properties.name?.getValue() || '';
+        const buildingNumber = entity.properties.buildingNumber?.getValue() || '';
+        const description = entity.properties.description?.getValue() || '';
+        
+        const nameScore = fuzzySearch(name, searchText);
+        const numberScore = fuzzySearch(buildingNumber, searchText);
+        const descScore = fuzzySearch(description, searchText);
+        
+        const maxScore = Math.max(nameScore, numberScore, descScore);
+        
+        if (maxScore > 0) {
+          currentResults.push({
+            entity,
+            score: maxScore,
+            name,
+            buildingNumber,
+            description,
+            type: 'building'
+          });
+        }
+      });
     }
 
-    dataSource.entities.values.forEach(entity => {
-      const name = entity.properties.name?.getValue() || '';
-      const buildingNumber = entity.properties.buildingNumber?.getValue() || '';
-      const description = entity.properties.description?.getValue() || '';
-      
-      const nameScore = fuzzySearch(name, searchText);
-      const numberScore = fuzzySearch(buildingNumber, searchText);
-      const descScore = fuzzySearch(description, searchText);
-      
-      const maxScore = Math.max(nameScore, numberScore, descScore);
-      
-      if (maxScore > 0) {
-        currentResults.push({
-          entity,
-          score: maxScore,
-          name,
-          buildingNumber,
-          description
-        });
-      }
-    });
+    // Search student services
+    const servicesSource = window.grossmontLayers.services;
+    if (servicesSource) {
+      servicesSource.entities.values.forEach(entity => {
+        const name = entity.properties.name?.getValue() || '';
+        const description = entity.properties.description?.getValue() || '';
+        
+        const nameScore = fuzzySearch(name, searchText);
+        const descScore = fuzzySearch(description, searchText);
+        
+        const maxScore = Math.max(nameScore, descScore);
+        
+        if (maxScore > 0) {
+          currentResults.push({
+            entity,
+            score: maxScore,
+            name,
+            description,
+            type: 'service'
+          });
+        }
+      });
+    }
 
     // Sort results by score
     currentResults.sort((a, b) => b.score - a.score);
@@ -658,7 +681,8 @@ function setupBuildingSearch() {
       searchResults.innerHTML = currentResults
         .map((result, index) => `
           <div class="search-result" data-index="${index}">
-            <strong>${result.name} (Building ${result.buildingNumber})</strong>
+            <strong>${result.name}</strong>
+            ${result.type === 'building' ? ` (Building ${result.buildingNumber})` : ' (Student Service)'}
             <span>${result.description}</span>
           </div>
         `)
@@ -666,7 +690,7 @@ function setupBuildingSearch() {
       searchResults.style.display = 'block';
       selectedIndex = -1;
     } else {
-      searchResults.innerHTML = '<div class="no-results">No buildings found</div>';
+      searchResults.innerHTML = '<div class="no-results">No results found</div>';
       searchResults.style.display = 'block';
     }
   }
@@ -683,12 +707,10 @@ function setupBuildingSearch() {
       el.style.backgroundColor = i === index ? '#e3f2fd' : '';
     });
 
-    // Fly to the building
+    // Fly to the location
     viewer.flyTo(result.entity, {
       duration: 2,
-      offset: new HeadingPitchRange(0, -CesiumMath.toRadians(65), 400),
-      //heightReference: Cesium.HeightReference.RELATIVE_TO_GROUND,
-      //offsetHeight: 50
+      offset: new HeadingPitchRange(0, -CesiumMath.toRadians(65), 400)
     });
 
     // Select the entity to show its info
@@ -905,6 +927,110 @@ async function addBusStopData() {
   }
 }
 
+// Convert student services CSV data to GeoJSON
+function studentServicesCsvToGeoJson(csvData) {
+  const geojsonData = {
+    type: 'FeatureCollection',
+    features: []
+  };
+  
+  csvData.forEach(service => {
+    if (service.Latitude && service.Longitude) {
+      geojsonData.features.push({
+        type: 'Feature',
+        geometry: {
+          type: 'Point',
+          coordinates: [parseFloat(service.Longitude), parseFloat(service.Latitude)]
+        },
+        properties: {
+          name: service.Name || '',
+          description: service.Description || ''
+        }
+      });
+    }
+  });
+  
+  return geojsonData;
+}
+
+// Add student services data
+async function addStudentServicesData() {
+  try {
+    console.log('Starting to load student services data');
+    
+    // Fetch and parse CSV data
+    const response = await fetch('./data/Studentservices.csv');
+    
+    if (!response.ok) {
+      throw new Error(`HTTP error! status: ${response.status}`);
+    }
+    
+    const csvText = await response.text();
+    const parsedData = Papa.parse(csvText, { header: true }).data;
+    
+    // Convert to GeoJSON
+    const geojsonData = studentServicesCsvToGeoJson(parsedData);
+    
+    // Create data source
+    const servicesSource = await GeoJsonDataSource.load(geojsonData);
+    
+    // Customize entities
+    servicesSource.entities.values.forEach(entity => {
+      const properties = entity.properties;
+      const serviceName = properties.name.getValue();
+      const serviceDescription = properties.description.getValue();
+      
+      // Create custom description HTML
+      const description = `
+        <div style="font-family: Arial, sans-serif; padding: 10px; max-width: 300px;">
+          <h2 style="color: #00685e; margin-top: 0;">${serviceName}</h2>
+          <p>${serviceDescription}</p>
+        </div>
+      `;
+      
+      // Set up the entity
+      entity.description = description;
+      
+      // Add a billboard (icon) for the service
+      entity.billboard = {
+        image: '../assets/service-icon.png',
+        verticalOrigin: Cesium.VerticalOrigin.BOTTOM,
+        scale: 0.09,
+        heightReference: Cesium.HeightReference.CLAMP_TO_GROUND,
+        disableDepthTestDistance: Number.POSITIVE_INFINITY
+      };
+    });
+    
+    // Add to viewer
+    viewer.dataSources.add(servicesSource);
+    window.grossmontLayers.services = servicesSource;
+    
+    // Set up click handler for services
+    const handler = new ScreenSpaceEventHandler(viewer.scene.canvas);
+    handler.setInputAction(function(click) {
+      const pickedFeature = viewer.scene.pick(click.position);
+      
+      if (pickedFeature && pickedFeature.id) {
+        // Check if it's a service entity
+        if (pickedFeature.id.properties && pickedFeature.id.properties.name) {
+          viewer.selectedEntity = pickedFeature.id;
+          
+          // Fly to the service
+          viewer.flyTo(pickedFeature.id, {
+            duration: 1,
+            offset: new HeadingPitchRange(0, -CesiumMath.toRadians(45), 200)
+          });
+        }
+      }
+    }, ScreenSpaceEventType.LEFT_CLICK);
+    
+    return servicesSource;
+  } catch (error) {
+    console.error('Error loading student services data:', error);
+    return null;
+  }
+}
+
 // Initialize application
 async function initialize() {
   try {
@@ -1015,6 +1141,9 @@ async function initialize() {
     
     updateLoadingMessage("Loading bus stops...", 85);
     await addBusStopData();
+    
+    updateLoadingMessage("Loading student services...", 90);
+    await addStudentServicesData();
     
     updateLoadingMessage("Setting up controls...", 90);
     
