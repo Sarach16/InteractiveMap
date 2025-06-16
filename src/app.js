@@ -719,6 +719,20 @@ function setupBuildingSearch() {
     // Clear the search input and hide the dropdown
     searchInput.value = '';
     searchResults.style.display = 'none';
+    
+    // Auto-close sidebar on mobile after selection
+    const isMobile = window.innerWidth <= 900;
+    if (isMobile) {
+      const sidebar = document.getElementById('sidebar');
+      const overlay = document.getElementById('sidebar-overlay');
+      const hamburgerBtn = document.getElementById('hamburger-btn');
+      
+      if (sidebar && sidebar.classList.contains('open')) {
+        sidebar.classList.remove('open');
+        overlay.classList.remove('active');
+        hamburgerBtn.innerHTML = '<i class="fas fa-bars"></i>';
+      }
+    }
   }
 
   // Event Listeners
@@ -776,6 +790,59 @@ function setupHomeButton() {
   const homeButton = document.getElementById('home-btn');
   if (homeButton) {
     homeButton.addEventListener('click', returnToInitialView);
+  }
+}
+
+// Set up hamburger menu functionality for mobile
+function setupHamburgerMenu() {
+  const hamburgerBtn = document.getElementById('hamburger-btn');
+  const sidebar = document.getElementById('sidebar');
+  const overlay = document.getElementById('sidebar-overlay');
+  
+  if (hamburgerBtn && sidebar && overlay) {
+    // Toggle sidebar on hamburger click
+    hamburgerBtn.addEventListener('click', () => {
+      const isOpen = sidebar.classList.contains('open');
+      
+      if (isOpen) {
+        closeSidebar();
+      } else {
+        openSidebar();
+      }
+    });
+    
+    // Close sidebar when clicking overlay
+    overlay.addEventListener('click', closeSidebar);
+    
+    // Close sidebar when pressing escape key
+    document.addEventListener('keydown', (e) => {
+      if (e.key === 'Escape' && sidebar.classList.contains('open')) {
+        closeSidebar();
+      }
+    });
+    
+    // Close sidebar when clicking outside on mobile
+    document.addEventListener('click', (e) => {
+      const isClickInsideSidebar = sidebar.contains(e.target);
+      const isClickOnHamburger = hamburgerBtn.contains(e.target);
+      const isMobile = window.innerWidth <= 900;
+      
+      if (!isClickInsideSidebar && !isClickOnHamburger && sidebar.classList.contains('open') && isMobile) {
+        closeSidebar();
+      }
+    });
+  }
+  
+  function openSidebar() {
+    sidebar.classList.add('open');
+    overlay.classList.add('active');
+    hamburgerBtn.innerHTML = '<i class="fas fa-times"></i>'; // Change to X icon
+  }
+  
+  function closeSidebar() {
+    sidebar.classList.remove('open');
+    overlay.classList.remove('active');
+    hamburgerBtn.innerHTML = '<i class="fas fa-bars"></i>'; // Change back to hamburger icon
   }
 }
 
@@ -1149,6 +1216,9 @@ async function initialize() {
     
     // Set up home button functionality
     setupHomeButton();
+    
+    // Set up hamburger menu for mobile
+    setupHamburgerMenu();
     
     // Add search functionality
     setupBuildingSearch();
