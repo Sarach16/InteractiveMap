@@ -655,11 +655,13 @@ function setupBuildingSearch() {
       servicesSource.entities.values.forEach(entity => {
         const name = entity.properties.name?.getValue() || '';
         const description = entity.properties.description?.getValue() || '';
+        const location = entity.properties.location?.getValue() || '';
         
         const nameScore = fuzzySearch(name, searchText);
         const descScore = fuzzySearch(description, searchText);
+        const locationScore = fuzzySearch(location, searchText);
         
-        const maxScore = Math.max(nameScore, descScore);
+        const maxScore = Math.max(nameScore, descScore, locationScore);
         
         if (maxScore > 0) {
           currentResults.push({
@@ -667,6 +669,7 @@ function setupBuildingSearch() {
             score: maxScore,
             name,
             description,
+            location,
             type: 'service'
           });
         }
@@ -684,6 +687,7 @@ function setupBuildingSearch() {
             <strong>${result.name}</strong>
             ${result.type === 'building' ? ` (Building ${result.buildingNumber})` : ' (Student Service)'}
             <span>${result.description}</span>
+            ${result.type === 'service' && result.location ? `<br><small style="color: #00685e; font-weight: 500;">📍 ${result.location}</small>` : ''}
           </div>
         `)
         .join('');
@@ -1011,7 +1015,8 @@ function studentServicesCsvToGeoJson(csvData) {
         },
         properties: {
           name: service.Name || '',
-          description: service.Description || ''
+          description: service.Description || '',
+          location: service.Location || ''
         }
       });
     }
@@ -1046,12 +1051,19 @@ async function addStudentServicesData() {
       const properties = entity.properties;
       const serviceName = properties.name.getValue();
       const serviceDescription = properties.description.getValue();
+      const serviceLocation = properties.location.getValue();
       
       // Create custom description HTML
       const description = `
         <div style="font-family: Arial, sans-serif; padding: 10px; max-width: 300px;">
           <h2 style="color: #00685e; margin-top: 0;">${serviceName}</h2>
-          <p>${serviceDescription}</p>
+          <p style="margin: 8px 0;">${serviceDescription}</p>
+          ${serviceLocation ? `
+            <div style="margin: 10px 0; padding: 8px; background-color: #f5f5f5; border-radius: 4px; border-left: 3px solid #00685e;">
+              <strong style="color: #003366; font-size: 15px; font-weight: bold;">📍 Location:</strong><br>
+              <span style="font-size: 15px; color: #222; font-weight: bold;">${serviceLocation}</span>
+            </div>
+          ` : ''}
         </div>
       `;
       
