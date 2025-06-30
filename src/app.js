@@ -240,6 +240,8 @@ async function addBuildingData() {
       const properties = entity.properties;
       const buildingId = properties.buildingNumber?.getValue() || '';
       
+      console.log('🏗️ Creating building entity:', buildingId, 'Properties:', Object.keys(properties));
+      
       // Set description
       entity.description = buildCustomDescription(properties);
       
@@ -283,9 +285,35 @@ function setupClickHandlerForOsmBuildings() {
     const pickedFeature = viewer.scene.pick(click.position);
     
     if (pickedFeature && pickedFeature.id) {
-      // Only handle our custom entities
-      if (pickedFeature.id.properties && pickedFeature.id.properties.buildingNumber) {
-        viewer.selectedEntity = pickedFeature.id;
+      console.log('🎯 Click detected on entity with properties:', Object.keys(pickedFeature.id.properties));
+      
+      // Only handle our custom entities - check for buildingNumber property
+      if (pickedFeature.id.properties && 
+          pickedFeature.id.properties.buildingNumber) {
+        console.log('🏢 Building clicked:', pickedFeature.id.properties.buildingNumber.getValue());
+        console.log('📍 Entity properties:', Object.keys(pickedFeature.id.properties));
+        console.log('📍 Using custom flyTo approach...');
+        
+        // Store the entity for later use
+        const buildingEntity = pickedFeature.id;
+        
+        // Fly to the building with custom parameters (identical to search behavior)
+        viewer.flyTo(buildingEntity, {
+          duration: 2,
+          offset: new HeadingPitchRange(0, -CesiumMath.toRadians(65), 400)
+        });
+        
+        // Set selected entity after the flyTo to show info box
+        // This should not trigger another zoom since we just flew there
+        setTimeout(() => {
+          viewer.selectedEntity = buildingEntity;
+          console.log('✅ Custom flyTo completed, selectedEntity set');
+        }, 50);
+        
+        console.log('✅ Custom flyTo initiated for building');
+        
+        // Return early to prevent other handlers from processing this click
+        return;
       } else {
         // Clear selection for non-custom entities
         viewer.selectedEntity = undefined;
@@ -394,7 +422,7 @@ function setupLocationTracking() {
         pitch: CesiumMath.toRadians(-45),
         roll: 0.0
       },
-      duration: 1
+      duration: 0
     });
   }
 
@@ -501,6 +529,8 @@ async function addParkingLotData() {
       const lotName = properties.name.getValue();
       const lotTypes = properties.type.getValue().split(';');
       
+      console.log('🅿️ Creating parking entity:', lotNumber, 'Properties:', Object.keys(properties));
+      
       // Create custom description HTML with styled parking types
       const description = `
         <div style="font-family: Arial, sans-serif; padding: 10px; max-width: 300px;">
@@ -545,15 +575,28 @@ async function addParkingLotData() {
       const pickedFeature = viewer.scene.pick(click.position);
       
       if (pickedFeature && pickedFeature.id) {
-        // Check if it's a parking lot entity
-        if (pickedFeature.id.properties && pickedFeature.id.properties.id) {
-          viewer.selectedEntity = pickedFeature.id;
+        // Check if it's a parking lot entity - must have id property AND type property (unique to parking lots)
+        if (pickedFeature.id.properties && 
+            pickedFeature.id.properties.id && 
+            pickedFeature.id.properties.id.getValue &&
+            pickedFeature.id.properties.type) {
+          console.log('🅿️ Parking lot clicked:', pickedFeature.id.properties.id.getValue());
+          console.log('📍 Parking entity properties:', Object.keys(pickedFeature.id.properties));
+          console.log('📍 Setting selectedEntity and calling custom flyTo...');
           
-          // Fly to the parking lot
+          // Fly to the parking lot FIRST
           viewer.flyTo(pickedFeature.id, {
             duration: 1,
             offset: new HeadingPitchRange(0, -CesiumMath.toRadians(45), 200)
           });
+          
+          // Then set selected entity
+          viewer.selectedEntity = pickedFeature.id;
+          
+          console.log('✅ Custom flyTo called for parking lot');
+          
+          // Return early to prevent other handlers from processing this click
+          return;
         }
       }
     }, ScreenSpaceEventType.LEFT_CLICK);
