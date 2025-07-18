@@ -569,6 +569,9 @@ async function addParkingLotData() {
     viewer.dataSources.add(parkingSource);
     window.grossmontLayers.parking = parkingSource;
     
+    // Initially hide the parking layer
+    parkingSource.show = false;
+    
     // Set up click handler for parking lots
     const handler = new ScreenSpaceEventHandler(viewer.scene.canvas);
     handler.setInputAction(function(click) {
@@ -899,7 +902,9 @@ function setupSidebarLayerToggles() {
   const transportationCheckbox = document.getElementById('transportation-checkbox');
   const servicesCheckbox = document.getElementById('services-checkbox');
 
+  // Initially uncheck all checkboxes since layers are hidden by default
   if (parkingCheckbox) {
+    parkingCheckbox.checked = false;
     parkingCheckbox.addEventListener('change', () => {
       if (window.grossmontLayers.parking) {
         window.grossmontLayers.parking.show = parkingCheckbox.checked;
@@ -907,16 +912,16 @@ function setupSidebarLayerToggles() {
     });
   }
   if (transportationCheckbox) {
+    transportationCheckbox.checked = false;
     transportationCheckbox.addEventListener('change', () => {
-      // TODO: Implement when transportation layer is added
       if (window.grossmontLayers.transportation) {
         window.grossmontLayers.transportation.show = transportationCheckbox.checked;
       }
     });
   }
   if (servicesCheckbox) {
+    servicesCheckbox.checked = false;
     servicesCheckbox.addEventListener('change', () => {
-      // TODO: Implement when services layer is added
       if (window.grossmontLayers.services) {
         window.grossmontLayers.services.show = servicesCheckbox.checked;
       }
@@ -1014,6 +1019,9 @@ async function addBusStopData() {
     // Add to viewer
     viewer.dataSources.add(busStopSource);
     window.grossmontLayers.transportation = busStopSource;
+    
+    // Initially hide the transportation layer
+    busStopSource.show = false;
     
     // Set up click handler for bus stops
     const handler = new ScreenSpaceEventHandler(viewer.scene.canvas);
@@ -1126,6 +1134,9 @@ async function addStudentServicesData() {
     // Add to viewer
     viewer.dataSources.add(servicesSource);
     window.grossmontLayers.services = servicesSource;
+    
+    // Initially hide the services layer
+    servicesSource.show = false;
     
     // Set up click handler for services
     const handler = new ScreenSpaceEventHandler(viewer.scene.canvas);
