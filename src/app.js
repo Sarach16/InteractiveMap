@@ -173,10 +173,15 @@ function buildCustomDescription(properties) {
       <hr>
       <a href="https://www.grossmont.edu/index.php" 
          target="_blank" 
+         rel="noopener noreferrer"
          style="display: inline-block; background-color: #003366; color: white; padding: 8px 15px; 
                 text-decoration: none; border-radius: 3px; cursor: pointer; margin-top: 10px; font-weight: bold;">
         More Information
       </a>
+      <br>
+      <small style="color: #666; font-size: 12px; margin-top: 5px; display: block;">
+        If buttons don't work, try opening the link in a new window manually
+      </small>
     </div>
   `;
 }
