@@ -171,11 +171,12 @@ function buildCustomDescription(properties) {
       <h3>${properties.name}</h3>
       <p>${properties.description}</p>
       <hr>
-      <button onclick="window.open('https://www.grossmont.edu/campus-map/building-${properties.buildingNumber}.php', '_blank')" 
-              style="background-color: #003366; color: white; padding: 5px 10px; border: none; 
-                     border-radius: 3px; cursor: pointer; margin-top: 10px;">
+      <a href="https://www.grossmont.edu/index.php" 
+         target="_blank" 
+         style="display: inline-block; background-color: #003366; color: white; padding: 8px 15px; 
+                text-decoration: none; border-radius: 3px; cursor: pointer; margin-top: 10px; font-weight: bold;">
         More Information
-      </button>
+      </a>
     </div>
   `;
 }
