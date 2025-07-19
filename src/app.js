@@ -823,6 +823,15 @@ function setupBuildingSearch() {
     // Highlight the selected entity if it's a service
     if (result.type === 'service') {
       highlightEntity(result.entity);
+      
+      // Automatically show the services layer and check the checkbox
+      if (window.grossmontLayers.services) {
+        window.grossmontLayers.services.show = true;
+      }
+      const servicesCheckbox = document.getElementById('services-checkbox');
+      if (servicesCheckbox) {
+        servicesCheckbox.checked = true;
+      }
     } else {
       // Clear any existing highlight for non-service selections
       clearHighlight();
