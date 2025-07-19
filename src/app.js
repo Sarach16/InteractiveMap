@@ -324,6 +324,9 @@ function setupClickHandlerForOsmBuildings() {
     // Clear selection for any other clicks
     viewer.selectedEntity = undefined;
     
+    // Clear any existing highlight when clicking elsewhere
+    clearHighlight();
+    
     // For OSM buildings or other primitive features
     if (pickedFeature && pickedFeature.primitive) {
       // Just log the click for debugging purposes
@@ -334,6 +337,9 @@ function setupClickHandlerForOsmBuildings() {
 
 // Function to return to the initial view
 function returnToInitialView() {
+  // Clear any existing highlight when returning to home view
+  clearHighlight();
+  
   viewer.camera.flyTo({
     destination: Cartesian3.fromDegrees(
       CAMPUS_CENTER.longitude,
@@ -387,7 +393,7 @@ function setupLocationTracking() {
       position: Cartesian3.fromDegrees(longitude, latitude),
       point: {
         pixelSize: 20,
-        color: Color.fromCssColorString('#4CAF50'),
+        color: Color.fromCssColorString('#009688'),
         outlineColor: Color.WHITE,
         outlineWidth: 2,
         heightReference: 1
@@ -587,6 +593,9 @@ async function addParkingLotData() {
           console.log('📍 Parking entity properties:', Object.keys(pickedFeature.id.properties));
           console.log('📍 Setting selectedEntity and calling custom flyTo...');
           
+          // Clear any existing highlight
+          clearHighlight();
+          
           // Fly to the parking lot FIRST
           viewer.flyTo(pickedFeature.id, {
             duration: 1,
@@ -633,6 +642,51 @@ window.grossmontLayers = {
   transportation: null, // Placeholder for future
   services: null // Placeholder for future
 };
+
+// Global variable to track highlighted entity
+window.highlightedEntity = null;
+
+// Function to highlight an entity with a green color
+function highlightEntity(entity) {
+  // Clear any existing highlight
+  clearHighlight();
+  
+  if (entity) {
+    // Store the original billboard properties
+    const originalBillboard = entity.billboard;
+    
+    // Create a highlighted version with green color
+    entity.billboard = {
+      image: originalBillboard.image.getValue(),
+      verticalOrigin: originalBillboard.verticalOrigin.getValue(),
+      scale: originalBillboard.scale.getValue() * 1.5, // Make it larger
+      heightReference: originalBillboard.heightReference.getValue(),
+      disableDepthTestDistance: originalBillboard.disableDepthTestDistance.getValue(),
+      color: new Color(0.0, 0.6, 0.6, 1.0) // Add teal color
+    };
+    
+    // Store the highlighted entity
+    window.highlightedEntity = {
+      entity: entity,
+      originalBillboard: originalBillboard
+    };
+    
+    console.log('✅ Entity highlighted in green');
+  }
+}
+
+// Function to clear the current highlight
+function clearHighlight() {
+  if (window.highlightedEntity) {
+    const { entity, originalBillboard } = window.highlightedEntity;
+    
+    // Restore original billboard properties
+    entity.billboard = originalBillboard;
+    
+    window.highlightedEntity = null;
+    console.log('✅ Highlight cleared');
+  }
+}
 
 // Set up a search function for buildings and services
 function setupBuildingSearch() {
@@ -765,6 +819,14 @@ function setupBuildingSearch() {
 
     // Select the entity to show its info
     viewer.selectedEntity = result.entity;
+    
+    // Highlight the selected entity if it's a service
+    if (result.type === 'service') {
+      highlightEntity(result.entity);
+    } else {
+      // Clear any existing highlight for non-service selections
+      clearHighlight();
+    }
     
     // Clear the search input and hide the dropdown
     searchInput.value = '';
@@ -1031,6 +1093,9 @@ async function addBusStopData() {
       if (pickedFeature && pickedFeature.id) {
         // Check if it's a bus stop entity
         if (pickedFeature.id.properties && pickedFeature.id.properties.name) {
+          // Clear any existing highlight
+          clearHighlight();
+          
           viewer.selectedEntity = pickedFeature.id;
           
           // Fly to the bus stop
@@ -1146,6 +1211,12 @@ async function addStudentServicesData() {
       if (pickedFeature && pickedFeature.id) {
         // Check if it's a service entity
         if (pickedFeature.id.properties && pickedFeature.id.properties.name) {
+          // Clear any existing highlight
+          clearHighlight();
+          
+          // Highlight the clicked service
+          highlightEntity(pickedFeature.id);
+          
           viewer.selectedEntity = pickedFeature.id;
           
           // Fly to the service
