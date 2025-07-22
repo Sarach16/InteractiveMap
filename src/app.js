@@ -1277,11 +1277,14 @@ async function initialize() {
     
     updateLoadingMessage("Loading 3D buildings...", 30);
     
+    let photorealisticTileset = null;
+    let osmBuildingsTileset = null;
+    
     try {
       // Load photorealistic tileset with error handling
       try {
         // Load photorealistic tileset with lower initial detail
-        const photorealisticTileset = await Cesium.createGooglePhotorealistic3DTileset({
+        photorealisticTileset = await Cesium.createGooglePhotorealistic3DTileset({
           maximumScreenSpaceError: 16 // Start with lower detail
         });
         
@@ -1297,7 +1300,7 @@ async function initialize() {
       
       try {
         // Load OSM buildings with lower initial detail
-        const osmBuildingsTileset = await Cesium.createOsmBuildingsAsync({
+        osmBuildingsTileset = await Cesium.createOsmBuildingsAsync({
           maximumScreenSpaceError: 16 // Start with lower detail
         });
         
@@ -1331,12 +1334,100 @@ async function initialize() {
       // Continue with the rest of the initialization
     }
     
+    // Function to check if tilesets are loaded at high quality
+    function checkTilesetQuality() {
+      let photorealisticReady = true;
+      let osmReady = true;
+      
+      if (photorealisticTileset) {
+        // Check if photorealistic tileset has reached target detail level
+        const currentError = photorealisticTileset.maximumScreenSpaceError;
+        photorealisticReady = currentError <= 4; // Target detail level
+        console.log('Photorealistic tileset detail level:', currentError, 'Ready:', photorealisticReady);
+      }
+      
+      if (osmBuildingsTileset) {
+        // Check if OSM buildings tileset has reached target detail level
+        const currentError = osmBuildingsTileset.maximumScreenSpaceError;
+        osmReady = currentError <= 4; // Target detail level
+        console.log('OSM buildings tileset detail level:', currentError, 'Ready:', osmReady);
+      }
+      
+      return photorealisticReady && osmReady;
+    }
+    
+    // Function to get loading progress based on tileset state
+    function getTilesetLoadingProgress() {
+      let totalProgress = 0;
+      let tilesetCount = 0;
+      
+      if (photorealisticTileset) {
+        tilesetCount++;
+        const currentError = photorealisticTileset.maximumScreenSpaceError;
+        // Calculate progress: 16 (initial) -> 4 (target) = 12 steps
+        // Current progress = (16 - currentError) / 12
+        const progress = Math.max(0, Math.min(1, (16 - currentError) / 12));
+        totalProgress += progress;
+      }
+      
+      if (osmBuildingsTileset) {
+        tilesetCount++;
+        const currentError = osmBuildingsTileset.maximumScreenSpaceError;
+        const progress = Math.max(0, Math.min(1, (16 - currentError) / 12));
+        totalProgress += progress;
+      }
+      
+      return tilesetCount > 0 ? totalProgress / tilesetCount : 0;
+    }
+    
+    // Function to wait for tilesets to load at high quality
+    function waitForHighQuality() {
+      return new Promise((resolve) => {
+        let checkCount = 0;
+        const maxChecks = 60; // Maximum 30 seconds (60 * 500ms)
+        
+        const checkInterval = setInterval(() => {
+          checkCount++;
+          
+          // Update loading progress based on tileset quality
+          const progress = getTilesetLoadingProgress();
+          const progressPercent = Math.round(98 + (progress * 2)); // 98-100% range
+          
+          // Create more informative loading message
+          let loadingMessage = "Loading high-quality map details...";
+          if (progress < 0.3) {
+            loadingMessage = "Loading basic map structures...";
+          } else if (progress < 0.6) {
+            loadingMessage = "Loading detailed buildings...";
+          } else if (progress < 0.9) {
+            loadingMessage = "Loading fine details...";
+          } else {
+            loadingMessage = "Finalizing map quality...";
+          }
+          
+          updateLoadingMessage(loadingMessage, progressPercent);
+          
+          if (checkTilesetQuality()) {
+            clearInterval(checkInterval);
+            console.log('Tilesets loaded at high quality');
+            resolve();
+          } else if (checkCount >= maxChecks) {
+            clearInterval(checkInterval);
+            console.log('Timeout reached, proceeding anyway');
+            resolve();
+          }
+        }, 500);
+      });
+    }
+    
+    // Function to check if any tilesets are available
+    function hasAnyTilesets() {
+      return (photorealisticTileset !== null) || (osmBuildingsTileset !== null);
+    }
+    
     // Gradually increase detail level
     setTimeout(() => {
       try {
-        const photorealisticTileset = viewer.scene.primitives.get(0);
-        const osmBuildingsTileset = viewer.scene.primitives.get(1);
-        
         if (photorealisticTileset) {
           photorealisticTileset.maximumScreenSpaceError = 8;
         }
@@ -1364,7 +1455,7 @@ async function initialize() {
     updateLoadingMessage("Loading student services...", 90);
     await addStudentServicesData();
     
-    updateLoadingMessage("Setting up controls...", 90);
+    updateLoadingMessage("Setting up controls...", 95);
     
     // Set up home button functionality
     setupHomeButton();
@@ -1381,9 +1472,6 @@ async function initialize() {
     // Final detail level increase
     setTimeout(() => {
       try {
-        const photorealisticTileset = viewer.scene.primitives.get(0);
-        const osmBuildingsTileset = viewer.scene.primitives.get(1);
-        
         if (photorealisticTileset) {
           photorealisticTileset.maximumScreenSpaceError = 4;
         }
@@ -1398,10 +1486,38 @@ async function initialize() {
       }
     }, 4000);
     
+    // Check if we have any tilesets to wait for
+    if (hasAnyTilesets()) {
+      updateLoadingMessage("Waiting for high-quality map to load...", 98);
+      
+      // Wait for tilesets to load at high quality with timeout
+      try {
+        await Promise.race([
+          waitForHighQuality(),
+          new Promise(resolve => setTimeout(resolve, 30000)) // 30 second timeout
+        ]);
+      } catch (error) {
+        console.error('Error waiting for high quality:', error);
+        // Continue anyway
+      }
+    } else {
+      updateLoadingMessage("Map loaded successfully...", 98);
+      // Small delay to show the message
+      await new Promise(resolve => setTimeout(resolve, 1000));
+    }
+    
     updateLoadingMessage("Ready!", 100);
     
-    // Hide loading overlay when everything is ready
-    setTimeout(hideLoading, 500);
+    // Hide loading overlay only after everything is fully loaded
+    setTimeout(hideLoading, 1000);
+    
+    // Safety mechanism: Force hide loading screen after 35 seconds total
+    setTimeout(() => {
+      if (loadingOverlay && loadingOverlay.style.display !== 'none') {
+        console.log('Safety timeout: Forcing loading screen to hide');
+        hideLoading();
+      }
+    }, 35000);
     
     // Limit camera movement
     viewer.scene.screenSpaceCameraController.enableRotate = true;
