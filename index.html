@@ -15,24 +15,156 @@
     <!-- Add a loading indicator with progress -->
     <style>
         #loadingOverlay {
+            position: fixed;
+            top: 0;
+            left: 0;
+            width: 100%;
+            height: 100%;
+            background: linear-gradient(135deg, #00685e 0%, #003366 100%);
             display: flex;
             flex-direction: column;
             align-items: center;
             justify-content: center;
+            z-index: 9999;
+            color: white;
+            font-family: 'Arial', sans-serif;
         }
+        
+        .loading-content {
+            text-align: center;
+            max-width: 90%;
+            padding: 20px;
+        }
+        
+        .griffin-container {
+            margin-bottom: 30px;
+            animation: bounce 2s infinite;
+        }
+        
+        .griffin-animation {
+            width: 120px;
+            height: 120px;
+            margin: 0 auto;
+            display: block;
+        }
+        
+        /* Fallback for when image fails to load */
+        .griffin-fallback {
+            width: 120px;
+            height: 120px;
+            margin: 0 auto;
+            display: flex;
+            align-items: center;
+            justify-content: center;
+            background: radial-gradient(circle, #FFD700 0%, #FFA500 100%);
+            border-radius: 50%;
+            color: #003366;
+            font-size: 48px;
+            font-weight: bold;
+            animation: bounce 2s infinite;
+        }
+        
+        /* Mobile responsive adjustments */
+        @media (max-width: 768px) {
+            .griffin-animation {
+                width: 80px;
+                height: 80px;
+            }
+            
+            .griffin-fallback {
+                width: 80px;
+                height: 80px;
+                font-size: 32px;
+            }
+            
+            .loading-content h1 {
+                font-size: 24px;
+                margin-bottom: 15px;
+            }
+            
+            .loading-content p {
+                font-size: 16px;
+                margin-bottom: 20px;
+            }
+        }
+        
+        @media (max-width: 480px) {
+            .griffin-animation {
+                width: 60px;
+                height: 60px;
+            }
+            
+            .griffin-fallback {
+                width: 60px;
+                height: 60px;
+                font-size: 24px;
+            }
+            
+            .loading-content h1 {
+                font-size: 20px;
+            }
+            
+            .loading-content p {
+                font-size: 14px;
+            }
+        }
+        
+        @keyframes bounce {
+            0%, 20%, 50%, 80%, 100% {
+                transform: translateY(0);
+            }
+            40% {
+                transform: translateY(-20px);
+            }
+            60% {
+                transform: translateY(-10px);
+            }
+        }
+        
         #loadingProgress {
             width: 300px;
+            max-width: 90%;
             height: 20px;
-            background-color: #f0f0f0;
+            background-color: rgba(255, 255, 255, 0.2);
             border-radius: 10px;
-            margin-top: 20px;
+            margin: 20px auto 0 auto;
             overflow: hidden;
+            border: 2px solid rgba(255, 255, 255, 0.3);
+            display: block;
         }
+        
         #loadingBar {
             height: 100%;
             width: 0%;
-            background-color: #4CAF50;
+            background: linear-gradient(90deg, #00685e, #004d44);
             transition: width 0.3s ease-in-out;
+            border-radius: 8px;
+        }
+        
+        .loading-text {
+            margin-bottom: 10px;
+            font-weight: 500;
+            color: rgba(255, 255, 255, 0.9);
+        }
+        
+        .grossmont-brand {
+            font-size: 18px;
+            font-weight: bold;
+            color: #FFD700;
+            margin-bottom: 5px;
+            text-shadow: 2px 2px 4px rgba(0, 0, 0, 0.3);
+        }
+        
+        @media (max-width: 768px) {
+            .grossmont-brand {
+                font-size: 16px;
+            }
+        }
+        
+        @media (max-width: 480px) {
+            .grossmont-brand {
+                font-size: 14px;
+            }
         }
     </style>
 </head>
@@ -65,9 +197,18 @@
     </div>
     <div id="cesiumContainer" class="fullSize"></div>
     <div id="loadingOverlay">
-        <h1>Loading...</h1>
-        <div id="loadingProgress">
-            <div id="loadingBar"></div>
+        <div class="loading-content">
+            <div class="griffin-container">
+                <img src="/assets/griffin-loading.gif" alt="Griffin Loading Animation" class="griffin-animation" 
+                     onerror="this.style.display='none'; this.nextElementSibling.style.display='flex';">
+                <div class="griffin-fallback" style="display: none;">🦅</div>
+            </div>
+            <div class="grossmont-brand">GROSSMONT COLLEGE</div>
+            <h1>Interactive Campus Map</h1>
+            <p class="loading-text">Loading...</p>
+            <div id="loadingProgress">
+                <div id="loadingBar"></div>
+            </div>
         </div>
     </div>
     <div id="toolbar">
@@ -81,5 +222,34 @@
 
     <script type="module" src="./src/app.js"></script>
     <script defer src="https://vercel.com/analytics/script.js"></script>
+    
+    <!-- Debug script for griffin image loading -->
+    <script>
+        document.addEventListener('DOMContentLoaded', function() {
+            const griffinImg = document.querySelector('.griffin-animation');
+            const griffinFallback = document.querySelector('.griffin-fallback');
+            
+            if (griffinImg) {
+                // Debug: Log image loading
+                console.log('Griffin image element found:', griffinImg);
+                console.log('Griffin image src:', griffinImg.src);
+                
+                griffinImg.addEventListener('load', function() {
+                    console.log('Griffin image loaded successfully');
+                });
+                
+                griffinImg.addEventListener('error', function() {
+                    console.error('Griffin image failed to load');
+                    console.log('Attempted to load:', this.src);
+                    
+                    // Show fallback
+                    this.style.display = 'none';
+                    if (griffinFallback) {
+                        griffinFallback.style.display = 'flex';
+                    }
+                });
+            }
+        });
+    </script>
 </body>
 </html>

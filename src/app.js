@@ -111,20 +111,24 @@ function hideLoading() {
 // Function to display error messages to users
 function showErrorMessage(message) {
   if (loadingOverlay) {
-    const h1Element = loadingOverlay.querySelector('h1');
-    if (h1Element) {
-      h1Element.textContent = 'Error Loading Map';
+    const loadingText = loadingOverlay.querySelector('.loading-text');
+    if (loadingText) {
+      loadingText.textContent = 'Error Loading Map';
     }
     
     const progressElement = document.getElementById('loadingProgress');
     if (progressElement && progressElement.parentNode) {
       // Replace progress bar with error message
       const errorDiv = document.createElement('div');
-      errorDiv.style.color = 'red';
+      errorDiv.style.color = '#ff6b6b';
       errorDiv.style.margin = '20px';
       errorDiv.style.maxWidth = '600px';
       errorDiv.style.textAlign = 'center';
-      errorDiv.innerHTML = `<p>${message}</p><p>Try refreshing the page. If the problem persists, please contact support.</p>`;
+      errorDiv.style.backgroundColor = 'rgba(255, 107, 107, 0.1)';
+      errorDiv.style.padding = '15px';
+      errorDiv.style.borderRadius = '8px';
+      errorDiv.style.border = '1px solid rgba(255, 107, 107, 0.3)';
+      errorDiv.innerHTML = `<p style="margin: 0 0 10px 0; font-weight: bold;">${message}</p><p style="margin: 0; font-size: 14px; opacity: 0.8;">Try refreshing the page. If the problem persists, please contact support.</p>`;
       
       progressElement.parentNode.replaceChild(errorDiv, progressElement);
     }
@@ -365,9 +369,9 @@ function returnToInitialView() {
 function updateLoadingMessage(message, progress) {
   const loadingOverlay = document.getElementById('loadingOverlay');
   if (loadingOverlay) {
-    const h1Element = loadingOverlay.querySelector('h1');
-    if (h1Element) {
-      h1Element.textContent = message;
+    const loadingText = loadingOverlay.querySelector('.loading-text');
+    if (loadingText) {
+      loadingText.textContent = message;
     }
     
     // Update progress bar if provided
