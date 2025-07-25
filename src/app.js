@@ -279,6 +279,9 @@ async function addBuildingData() {
     // Optional: Set up a click handler for identifying OSM buildings
     setupClickHandlerForOsmBuildings();
     
+    // Set up hover handlers for building labels
+    setupBuildingLabelHoverHandlers();
+    
     return buildingSource;
   } catch (error) {
     console.error('Error loading building data:', error);
@@ -336,6 +339,7 @@ function setupClickHandlerForOsmBuildings() {
     
     // Clear any existing highlight when clicking elsewhere
     clearHighlight();
+    clearBuildingLabelHighlight();
     
     // For OSM buildings or other primitive features
     if (pickedFeature && pickedFeature.primitive) {
@@ -345,10 +349,35 @@ function setupClickHandlerForOsmBuildings() {
   }, ScreenSpaceEventType.LEFT_CLICK);
 }
 
+// Setup hover handlers for building labels
+function setupBuildingLabelHoverHandlers() {
+  const handler = new ScreenSpaceEventHandler(viewer.scene.canvas);
+  
+  // Mouse move handler for hover effects
+  handler.setInputAction(function(movement) {
+    const pickedFeature = viewer.scene.pick(movement.endPosition);
+    
+    // Clear any existing hover highlight
+    clearBuildingLabelHighlight();
+    
+    if (pickedFeature && pickedFeature.id) {
+      // Check if it's a building entity with a label
+      if (pickedFeature.id.properties && 
+          pickedFeature.id.properties.buildingNumber &&
+          pickedFeature.id.label) {
+        
+        // Highlight the building label on hover
+        highlightBuildingLabel(pickedFeature.id);
+      }
+    }
+  }, ScreenSpaceEventType.MOUSE_MOVE);
+}
+
 // Function to return to the initial view
 function returnToInitialView() {
   // Clear any existing highlight when returning to home view
   clearHighlight();
+  clearBuildingLabelHighlight();
   
   viewer.camera.flyTo({
     destination: Cartesian3.fromDegrees(
@@ -656,6 +685,9 @@ window.grossmontLayers = {
 // Global variable to track highlighted entity
 window.highlightedEntity = null;
 
+// Global variable to track hovered building label
+window.hoveredBuildingLabel = null;
+
 // Function to highlight an entity with a green color
 function highlightEntity(entity) {
   // Clear any existing highlight
@@ -695,6 +727,50 @@ function clearHighlight() {
     
     window.highlightedEntity = null;
     console.log('✅ Highlight cleared');
+  }
+}
+
+// Function to highlight building label on hover
+function highlightBuildingLabel(entity) {
+  if (entity && entity.label) {
+    // Store original label properties
+    const originalLabel = {
+      fillColor: entity.label.fillColor.getValue(),
+      backgroundColor: entity.label.backgroundColor.getValue(),
+      scale: entity.label.scale ? entity.label.scale.getValue() : 1.0
+    };
+    
+    // Create highlighted label with different color
+    entity.label.fillColor = Color.fromCssColorString('#FFD700'); // Gold color
+    entity.label.backgroundColor = Color.fromCssColorString('#00685e').withAlpha(0.9); // Darker background
+    if (entity.label.scale) {
+      entity.label.scale = 1.2; // Slightly larger
+    }
+    
+    // Store the hovered label
+    window.hoveredBuildingLabel = {
+      entity: entity,
+      originalLabel: originalLabel
+    };
+    
+    console.log('✅ Building label highlighted on hover');
+  }
+}
+
+// Function to clear building label highlight
+function clearBuildingLabelHighlight() {
+  if (window.hoveredBuildingLabel) {
+    const { entity, originalLabel } = window.hoveredBuildingLabel;
+    
+    // Restore original label properties
+    entity.label.fillColor = originalLabel.fillColor;
+    entity.label.backgroundColor = originalLabel.backgroundColor;
+    if (entity.label.scale) {
+      entity.label.scale = originalLabel.scale;
+    }
+    
+    window.hoveredBuildingLabel = null;
+    console.log('✅ Building label highlight cleared');
   }
 }
 
@@ -845,6 +921,7 @@ function setupBuildingSearch() {
     } else {
       // Clear any existing highlight for non-service selections
       clearHighlight();
+      clearBuildingLabelHighlight();
     }
     
     // Clear the search input and hide the dropdown
