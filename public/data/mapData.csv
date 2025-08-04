@@ -1,18 +1,29 @@
 Building Number,Name,Description,Latitude,Longitude
-10,Administration,"Admissions & Records, Financial Aid, Counseling, Transfer Center, Deans, and other student services.",32.81531709,-117.0060159
+10,Administration,"Admissions & Records, Financial Aid, Counseling, Transfer Center, Deans, and other student services.",32.81524413155157,-117.0063072303728
+17,,,32.81402117929233,-117.00666435933262
+18,,,32.81423423023297,-117.00662454235754
+19,,,32.81456202745981,-117.00663959978952
 20,Digital Media & Photography,"Photography, Digital Art, and Media Communications classes with professional studios and darkrooms.",32.81488237,-117.0069176
 21,Theater Arts,"Stagehouse Theatre with classes in acting, musical theatre, makeup, and costume design.",32.81504,-117.00757
 22,Performing and Visual Arts Center/Hyde Art Gallery,Theather and Art Gallery ,32.81460396,-117.0075237
 23,Sculpture,Sculpture I–III courses using modern materials and methods.,32.81500282,-117.0081166
 24,Dance & Communications,"Ballet, Jazz, Hip Hop, Latin Dance, Public Speaking, and Debate.",32.81548101,-117.0080028
+25,,,32.81535533770389,-117.00758104182432
 26,Music,"Class piano, guitar, jazz, and orchestra courses.",32.81537,-117.00721
-27,Arts & Ceramics,Traditional and contemporary art including ceramics and painting.,32.81566261,-117.0074074
+27,Arts & Ceramics,"Traditional and contemporary art including ceramics and painting",32.81568168962371,-117.00728090600012
 30,Science Labs,"Biology, Chemistry, Anatomy labs; includes 30A plant lab.",32.81673282,-117.0072497
 31,Administration of Justice,"Police Academy, Corrections, Forensics, and Law Enforcement training.",32.81604553,-117.0073071
 32,Child Development Center,"Courses in child development, parenting, and special needs education.",32.81592371,-117.0083056
+32A,,,32.81601647084971,-117.00799927055792
+32B,,,32.81591954152841,-117.00828492582094
 34,Allied Health & Science,"Nursing, Cardiovascular Tech, Respiratory Therapy, and science labs.",32.81656284,-117.0079192
 36,Math and Science ,"Anthropology, Earth Science, Mathematics, Tutoring Center, MESA, and Veterans Resource Center.",32.81724326,-117.0071648
 38,Portables,"Temporary classrooms, district offices, and portable restrooms.",32.81898116,-117.007139
+38E,CalWORKS,"CalWORKS, and ACE Office",32.818441833933356,-117.00694268409629
+38F,American Collegiate,"American Collegiate English Classroom",32.81861756454242,-117.00695713340006
+38G,Middle College,"Middle College and High School Office/Classrom",32.818796953712976,-117.0069661211693
+38H,District Office, "Human Resources, District Office",32.81873808851946,-117.00711757602477
+38J,District Office, "District Office",32.81900749594841,-117.00715152577426
 41,Exercise Science & Wellness Center,Training and wellness programs for athletes a,32.81771163,-117.0064923
 42,Athletics (Support Facilities),Athletic support and changing rooms.,32.81735985,-117.0056702
 43,Athletics (Gymnasium),"Indoor athletics, volleyball, and basketball.",32.81732912,-117.0064134
@@ -22,16 +33,51 @@ Building Number,Name,Description,Latitude,Longitude
 54,Office Tech & Languages Extension,Overflow offices for world languages and BOT.,32.81621397,-117.0045121
 55,Computer Science & Info Systems,"Computer programming, data science, drone tech.",32.81623822,-117.0049976
 56,Parking Structure, Multi-level student parking facility.,32.81638157,-117.0037049
+57,CAPS, Facilities Operations,32.81615524792534,-117.00275182421952
 60,Griffin Center/Culinary Arts & Student Affairs,"Cafeteria and Java Market/ Baking, nutrition, culinary entrepreneurship. Upstairs: ASGC Board Room, Student Affairs, food pantry (Gizmo’s Kitchen), Peet’s Coffee, Career Center, Health Services.",32.81563542,-117.0050679
 62,College Bookstore,Bookstore,32.81541671,-117.0057
 70,Library & Learning Center,"Library, tech mall, English writing center, computer labs, and The Village student support programs.",32.8162497,-117.0062974
-80,District Annex,"Chancellor, Vice Chancellor, and other district offices.",32.81998651447728,-117.00758271557308
+71,,,32.816214531778016,-117.00671858513252
+80,District Annex,"Chancellor, Vice Chancellor, and other district offices.",32.81973406714612,-117.00694445028675
+80B,,,32.81978462905118,-117.00649972862362
+81,,,32.82002059489382,-117.0070124982577
+82,,,32.82001157862362,-117.00664436506065
+83,,,32.82024017265923,-117.0065175859703
+84,,,32.82024480603937,-117.00697410642123
+85,,,32.82013892021918,-117.00741659391133
+86,,,32.82015331537491,-117.00763483235404
+87,,,32.82025563828731,-117.0079609585887
+88,,,32.820257070149566,-117.0082346276804
 91,Athletic Maintenance,"",32.81759440286119,-117.00547715438408
 92,Football Field and track House,"",32.818730981117625,-117.00442136298298
 93,Softball Field House,"",32.8196059922044,-117.00511969225805
 94,Baseball Field House,"",32.81932717107021,-117.00413052307026
 95,Observatory,"",32.819513041274625,-117.00303817401151
-100,Portable Classrooms,"",32.81566528187124, -117.00374305382724
-
-
-
+100,Portable Classrooms,"",32.81566528187124,-117.00374305382724
+102A,,,32.81584998961375,-117.00401162494732
+102B,,,32.81585975355476,-117.0038334826349
+103A,,,32.8156981792222,-117.00395782271723
+106,,,32.81555842013208,-117.00397928038993
+107,,,32.81549163934549,-117.00392402549915
+108,,,32.81549003431103,-117.00379320418453
+109,,,32.815594361489204,-117.00378365518345
+110,,,32.8157267765774,-117.00382280608781
+111,,,32.81585125857261,-117.00374544402301
+112,,,32.815895495493876,-117.00367606667973
+113,,,32.81586720923611,-117.00352001858265
+114,,,32.81570263446679,-117.0035965127479
+115,,,32.815594632108755,-117.00362405064736
+116,,,32.815603632310264,-117.0034343451176
+117,,,32.81566920517951,-117.00343587500092
+118,,,32.81573349225925,-117.00342669570108
+120A,,,32.81586807144255,-117.00333868007651
+121A,,,32.81586903134322,-117.00317305503432
+123A,,,32.815739897952255,-117.00327541770766
+123B,,,32.81573764377618,-117.00315807106016
+124,,,32.81580908530788,-117.00299200208555
+125,,,32.815542867028825,-117.00321455512321
+126,,,32.81550330818412,-117.00334975716505
+127,,,32.81543651778648,-117.00354155713133
+128,,,32.81539601240328,-117.00368459205764
+129,,,32.815373221370315,-117.00383486291948
+130,,,32.81534315901776,-117.0039989141684

@@ -142,25 +142,43 @@ function csvToGeoJson(csvData) {
     features: []
   };
   
-  csvData.forEach(building => {
-    if (building.Latitude && building.Longitude) {
-      const lat = parseFloat(building.Latitude);
-      const lon = parseFloat(building.Longitude);
-      
-      geojsonData.features.push({
-        type: 'Feature',
-        geometry: {
-          type: 'Point',
-          coordinates: [lon, lat]
-        },
-        properties: {
-          id: building['Building Number'] || '',
-          name: building.Name || '',
-          description: building.Description || '',
-          buildingNumber: building['Building Number'] || '',
-          // Add more properties if needed
+  csvData.forEach((building, index) => {
+    try {
+      if (building.Latitude && building.Longitude) {
+        const lat = parseFloat(building.Latitude);
+        const lon = parseFloat(building.Longitude);
+        
+        // Validate coordinates
+        if (isNaN(lat) || isNaN(lon)) {
+          console.warn(`Invalid coordinates for building ${building['Building Number'] || index}: lat=${building.Latitude}, lon=${building.Longitude}`);
+          return;
         }
-      });
+        
+        // Check if coordinates are within reasonable bounds
+        if (lat < -90 || lat > 90 || lon < -180 || lon > 180) {
+          console.warn(`Coordinates out of bounds for building ${building['Building Number'] || index}: lat=${lat}, lon=${lon}`);
+          return;
+        }
+        
+        geojsonData.features.push({
+          type: 'Feature',
+          geometry: {
+            type: 'Point',
+            coordinates: [lon, lat]
+          },
+          properties: {
+            id: building['Building Number'] || '',
+            name: building.Name || '',
+            description: building.Description || '',
+            buildingNumber: building['Building Number'] || '',
+            // Add more properties if needed
+          }
+        });
+      } else {
+        console.warn(`Missing coordinates for building ${building['Building Number'] || index}`);
+      }
+    } catch (error) {
+      console.error(`Error processing building ${building['Building Number'] || index}:`, error);
     }
   });
   
@@ -169,11 +187,19 @@ function csvToGeoJson(csvData) {
 
 // Create custom HTML for the info box
 function buildCustomDescription(properties) {
+  const buildingNumber = properties.buildingNumber || '';
+  const buildingName = properties.name || '';
+  const buildingDescription = properties.description || '';
+  
+  // Only show name and description if they exist
+  const nameSection = buildingName ? `<h3>${buildingName}</h3>` : '';
+  const descriptionSection = buildingDescription ? `<p>${buildingDescription}</p>` : '';
+  
   return `
     <div style="font-family: Arial, sans-serif; padding: 10px; max-width: 300px;">
-      <h2 style="color: #00685e; margin-top: 0;">Building ${properties.buildingNumber}</h2>
-      <h3>${properties.name}</h3>
-      <p>${properties.description}</p>
+      <h2 style="color: #00685e; margin-top: 0;">Building ${buildingNumber}</h2>
+      ${nameSection}
+      ${descriptionSection}
       <hr>
       <a href="https://www.grossmont.edu/index.php" 
          target="_blank" 
@@ -249,8 +275,13 @@ async function addBuildingData() {
     buildingSource.entities.values.forEach(entity => {
       const properties = entity.properties;
       const buildingId = properties.buildingNumber?.getValue() || '';
+      const buildingName = properties.name?.getValue() || '';
+      const buildingDescription = properties.description?.getValue() || '';
       
       console.log('🏗️ Creating building entity:', buildingId, 'Properties:', Object.keys(properties));
+      
+      // Determine if this is a minimal building (only has building number and coordinates)
+      const isMinimalBuilding = !buildingName && !buildingDescription;
       
       // Set description
       entity.description = buildCustomDescription(properties);
@@ -269,12 +300,20 @@ async function addBuildingData() {
         showBackground: true,
         backgroundColor: Color.fromCssColorString('#00685e').withAlpha(0.7),
         backgroundPadding: new Cartesian3(7, 5),
-        disableDepthTestDistance: Number.POSITIVE_INFINITY
+        disableDepthTestDistance: Number.POSITIVE_INFINITY,
+        // All buildings show their labels now (minimal buildings will be scaled instead of hidden)
+        show: true
       };
+      
+      // Store whether this is a minimal building for later use
+      entity.isMinimalBuilding = isMinimalBuilding;
     });
     
     // Add to viewer
     viewer.dataSources.add(buildingSource);
+    
+    // Set up camera change handler for LOD
+    setupBuildingLOD(buildingSource);
     
     // Optional: Set up a click handler for identifying OSM buildings
     setupClickHandlerForOsmBuildings();
@@ -371,6 +410,51 @@ function setupBuildingLabelHoverHandlers() {
       }
     }
   }, ScreenSpaceEventType.MOUSE_MOVE);
+}
+
+// Setup building level-of-detail (LOD) based on camera height
+function setupBuildingLOD(buildingSource) {
+  // Debounce function to limit how often we update LOD
+  let lodUpdateTimeout;
+  
+  function updateBuildingLOD() {
+    if (!buildingSource || !buildingSource.entities) return;
+    
+    try {
+      const cameraHeight = viewer.camera.positionCartographic.height;
+      
+      buildingSource.entities.values.forEach(entity => {
+        if (entity.isMinimalBuilding && entity.label) {
+          // Scale font size based on camera height
+          let fontSize = '14pt';
+          
+          if (cameraHeight > 800) {
+            fontSize = '8pt'; // Very small when far away
+          } else if (cameraHeight > 500) {
+            fontSize = '10pt'; // Small when moderately far
+          } else if (cameraHeight > 300) {
+            fontSize = '12pt'; // Medium when closer
+          } else {
+            fontSize = '14pt'; // Full size when close
+          }
+          
+          entity.label.font = fontSize + ' sans-serif';
+        }
+      });
+    } catch (error) {
+      console.warn('Error in updateBuildingLOD:', error);
+    }
+  }
+  
+  // Update LOD when camera moves
+  viewer.camera.changed.addEventListener(() => {
+    // Debounce the LOD updates to improve performance
+    clearTimeout(lodUpdateTimeout);
+    lodUpdateTimeout = setTimeout(updateBuildingLOD, 100);
+  });
+  
+  // Initial LOD update
+  updateBuildingLOD();
 }
 
 // Function to return to the initial view
